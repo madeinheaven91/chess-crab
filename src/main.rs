@@ -14,8 +14,8 @@ pub mod errors;
 pub mod game;
 pub mod masks;
 pub mod shared;
-// #[cfg(test)]
-// pub mod test;
+#[cfg(test)]
+pub mod test;
 
 struct State {
     game: Rc<RefCell<Game>>,

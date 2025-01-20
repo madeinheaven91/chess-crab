@@ -177,14 +177,14 @@ pub fn gen_ray(square: u64, direction: DIRECTION) -> u64 {
             }
             res & !square
         }
-        NE => {
+        NW => {
             let mut res = square;
-            for i in 0..8 {
-                let new_bit = square << (i * 9);
+            for i in 1..8 {
+                let new_bit = square << (i * 7);
                 if new_bit == 0 {
                     break;
                 }
-                if Bitboard::lsb_index(new_bit).unwrap() % 8 == 0 {
+                if Bitboard::lsb_index(new_bit).unwrap() % 8 == 7 {
                     break;
                 }
                 res |= new_bit;
@@ -193,7 +193,7 @@ pub fn gen_ray(square: u64, direction: DIRECTION) -> u64 {
         }
         SW => {
             let mut res = square;
-            for i in 0..8 {
+            for i in 1..8 {
                 let new_bit = square >> (i * 9);
                 if new_bit == 0 {
                     break;
@@ -207,7 +207,7 @@ pub fn gen_ray(square: u64, direction: DIRECTION) -> u64 {
         }
         SE => {
             let mut res = square;
-            for i in 0..8 {
+            for i in 1..8 {
                 let new_bit = square >> (i * 7);
                 if new_bit == 0 {
                     break;
@@ -219,14 +219,14 @@ pub fn gen_ray(square: u64, direction: DIRECTION) -> u64 {
             }
             res & !square
         }
-        NW => {
+        NE => {
             let mut res = square;
-            for i in 0..8 {
-                let new_bit = square << (i * 7);
+            for i in 1..8 {
+                let new_bit = square << (i * 9);
                 if new_bit == 0 {
                     break;
                 }
-                if Bitboard::lsb_index(new_bit).unwrap() % 8 == 7 {
+                if Bitboard::lsb_index(new_bit).unwrap() % 8 == 0 {
                     break;
                 }
                 res |= new_bit;

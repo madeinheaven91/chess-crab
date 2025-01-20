@@ -2,7 +2,7 @@ use crate::{
     bitboard::{Bitboard, Piece},
     errors::ChessError,
     masks::{
-        bishop_attacks, king_attacks, knight_attacks, pawn_attacks, queen_attacks, rook_attacks,
+        bishop_attacks, king_attacks, knight_attacks, pawn_attacks, pawn_captures, queen_attacks, rook_attacks
     },
     shared::*,
 };
@@ -48,6 +48,7 @@ impl Display for Move {
         )
     }
 }
+
 
 #[derive(Clone, Copy)]
 pub struct Game {
@@ -364,6 +365,27 @@ impl Game {
         }
         self.turn = self.turn.not();
     }
+
+    // pub fn is_check(&self, color: Color) -> bool {
+    //     let king = Bitboard::lsb_index(self.get_bitboard(Piece::King, color).num()).unwrap();
+    //     let mut check = false;
+    //     for piece in Piece::pieces(){
+    //         let check_mask = match piece{
+    //             Piece::King => king_attacks(king, *self, color),
+    //             Piece::Queen => queen_attacks(king, *self, color),
+    //             Piece::Rook => rook_attacks(king, *self, color),
+    //             Piece::Bishop => bishop_attacks(king, *self, color),
+    //             Piece::Knight => knight_attacks(king, *self, color),
+    //             Piece::Pawn => pawn_captures(king, *self, color),
+    //         }.num();
+    //         let enemies = self.get_bitboard(piece, !color).num();
+    //         if check_mask & enemies != 0 {
+    //             check = true;
+    //             break;
+    //         }
+    //     };
+    //     check
+    // }
 }
 
 impl Default for Game {
@@ -396,8 +418,7 @@ impl Default for Game {
 }
 
 impl Display for Game {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut pieces: [char; 64] = [' '; 64];
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { let mut pieces: [char; 64] = [' '; 64];
         for p in self.wk {
             pieces[p as usize] = 'K';
         }
@@ -445,5 +466,34 @@ impl Display for Game {
         writeln!(f, "  a   b   c   d   e   f   g   h  ")?;
         writeln!(f, "\nMove: {:?}", self.turn)?;
         Ok(())
+    }
+}
+
+impl Game{
+    pub fn empty() -> Game{
+        use Color::*;
+        use Piece::*;
+        Game {
+            wk: Bitboard::new(0, Some(King), Some(White)),
+            wq: Bitboard::new(0, Some(King), Some(White)),
+            wr: Bitboard::new(0, Some(King), Some(White)),
+            wb: Bitboard::new(0, Some(King), Some(White)),
+            wn: Bitboard::new(0, Some(King), Some(White)),
+            wp: Bitboard::new(0, Some(King), Some(White)),
+            bk: Bitboard::new(0, Some(King), Some(White)),
+            bq: Bitboard::new(0, Some(King), Some(White)),
+            br: Bitboard::new(0, Some(King), Some(White)),
+            bb: Bitboard::new(0, Some(King), Some(White)),
+            bn: Bitboard::new(0, Some(King), Some(White)),
+            bp: Bitboard::new(0, Some(King), Some(White)),
+            turn: Color::White,
+            white_oo: true,
+            white_ooo: true,
+            black_oo: true,
+            black_ooo: true,
+            en_passant: None,
+            halfmoves: 0,
+            fullmoves: 0,
+        }
     }
 }

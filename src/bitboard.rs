@@ -188,16 +188,38 @@ impl From<u32> for Bitboard {
     }
 }
 
-// Array is a horizontally mirrored representation of board because of bitboard mapping
-// Not sure if i should keep it that way
+
+/// Initialize a bitboard from an array that resembles an actual board
+/// e.g.
+/// `Bitboard::from([
+///     0b00000000,
+///     0b00000000,
+///     0b00000000,
+///     0b00100000,
+///     0b00001000,
+///     0b01000100,
+///     0b00100011,
+///     0b00000000,
+/// ])`
 impl From<[u32; 8]> for Bitboard {
     fn from(value: [u32; 8]) -> Self {
         Bitboard {
-            num: value.iter().fold(0, |acc, x| acc << 8 | *x as u64),
+            // num: value.iter().fold(0, |acc, x| (acc << 8) | *x as u64),
+            num: value.iter().map(|x| reverse(*x)).fold(0, |acc, x| (acc << 8) | x as u64),
             kind: None,
             color: None
         }
     }
+}
+fn reverse(num: u32) -> u32{
+  ((num & 0x01) << 7)
+| ((num & 0x02) << 5)
+| ((num & 0x04) << 3)
+| ((num & 0x08) << 1)
+| ((num & 0x10) >> 1)
+| ((num & 0x20) >> 3)
+| ((num & 0x40) >> 5)
+| ((num & 0x80) >> 7)
 }
 
 impl BitOr for Bitboard {
