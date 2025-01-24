@@ -22,6 +22,23 @@ impl Piece{
     pub fn pieces() -> [Piece; 6]{
         [Piece::King, Piece::Queen, Piece::Rook, Piece::Bishop, Piece::Knight, Piece::Pawn]
     }
+    pub fn promotable() -> [Piece; 4]{
+        [Piece::Queen, Piece::Rook, Piece::Bishop, Piece::Knight]
+    }
+}
+
+impl Display for Piece{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let char = match self {
+            Self::King => "K",
+            Self::Queen => "Q",
+            Self::Bishop => "B",
+            Self::Knight => "N",
+            Self::Rook => "R",
+            Self::Pawn => ""
+        };
+        write!(f, "{}", char)
+    }
 }
 
 /// A wrapper type for u64 with chess util methods.
@@ -254,6 +271,7 @@ impl BitXor for Bitboard {
         }
     }
 }
+
 
 impl BitOrAssign for Bitboard {
     fn bitor_assign(&mut self, rhs: Self) {

@@ -4,7 +4,7 @@ use crate::{
     shared::{DIRECTION, FILE_A, FILE_B, FILE_G, FILE_H, RANK_2, RANK_7, RAY},
 };
 
-pub fn pawn_advances(pawn: u32, game: Game, color: Color) -> Bitboard {
+pub fn pawn_advances(pawn: u32, game: &Game, color: Color) -> Bitboard {
     let pawn = 1u64 << pawn;
     let blockers = game.all_pieces().num() & !pawn;
     let advances = match color {
@@ -14,7 +14,7 @@ pub fn pawn_advances(pawn: u32, game: Game, color: Color) -> Bitboard {
     Bitboard::from(advances)
 }
 
-pub fn pawn_captures(pawn: u32, game: Game, color: Color) -> Bitboard {
+pub fn pawn_captures(pawn: u32, game: &Game, color: Color) -> Bitboard {
     let enemies = game.opposite_pieces(color).num();
     let pawn = 1u64 << pawn;
     let captures = match color {
@@ -25,11 +25,11 @@ pub fn pawn_captures(pawn: u32, game: Game, color: Color) -> Bitboard {
     Bitboard::from(captures)
 }
 
-pub fn pawn_attacks(pawn: u32, game: Game, color: Color) -> Bitboard {
+pub fn pawn_attacks(pawn: u32, game: &Game, color: Color) -> Bitboard {
     pawn_advances(pawn, game, color) | pawn_captures(pawn, game, color)
 }
 
-pub fn king_attacks(king: u32, game: Game, color: Color) -> Bitboard {
+pub fn king_attacks(king: u32, game: &Game, color: Color) -> Bitboard {
     let bnum = 1u64 << king;
     let blockers = game.own_pieces(color).num() & !bnum;
     let moves = bnum >> 8
@@ -39,7 +39,7 @@ pub fn king_attacks(king: u32, game: Game, color: Color) -> Bitboard {
     Bitboard::from(moves & !blockers)
 }
 
-pub fn knight_attacks(knight: u32, game: Game, color: Color) -> Bitboard {
+pub fn knight_attacks(knight: u32, game: &Game, color: Color) -> Bitboard {
     let bnum = 1u64 << knight;
     let blockers = game.own_pieces(color).num() & !bnum;
     let moves = ((bnum >> 17 | bnum << 15) & !FILE_H)
@@ -51,7 +51,7 @@ pub fn knight_attacks(knight: u32, game: Game, color: Color) -> Bitboard {
 
 // FIXME: match clauses because bit scans could be empty, which is bad performance-wise.
 // Somehow it needs to be fixed
-pub fn rook_attacks(index: u32, game: Game, color: Color) -> Bitboard {
+pub fn rook_attacks(index: u32, game: &Game, color: Color) -> Bitboard {
     use DIRECTION::*;
     let blockers = game.own_pieces(color).num();
     let captures = game.opposite_pieces(color).num();
@@ -119,7 +119,7 @@ pub fn rook_attacks(index: u32, game: Game, color: Color) -> Bitboard {
     Bitboard::from(west_scan | east_scan | north_scan | south_scan)
 }
 
-pub fn bishop_attacks(bishop: u32, game: Game, color: Color) -> Bitboard {
+pub fn bishop_attacks(bishop: u32, game: &Game, color: Color) -> Bitboard {
     use DIRECTION::*;
     let blockers = game.own_pieces(color).num();
     let captures = game.opposite_pieces(color).num();
@@ -179,6 +179,7 @@ pub fn bishop_attacks(bishop: u32, game: Game, color: Color) -> Bitboard {
     Bitboard::from(sw_scan | ne_scan | nw_scan | se_scan)
 }
 
-pub fn queen_attacks(queen: u32, game: Game, color: Color) -> Bitboard {
+pub fn queen_attacks(queen: u32, game: &Game, color: Color) -> Bitboard {
     bishop_attacks(queen, game, color) | rook_attacks(queen, game, color)
 }
+

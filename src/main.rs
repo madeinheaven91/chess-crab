@@ -51,7 +51,11 @@ fn main_loop(state: &mut State) -> anyhow::Result<()> {
 
         let mut buf = String::new();
         std::io::stdin().read_line(&mut buf).unwrap();
-        let cmd = buf.trim().split(" ").map(|s| s.trim()).collect::<Vec<_>>();
+        let mut cmd = buf.trim().split(" ").map(|s| s.trim()).collect::<Vec<_>>();
+        while cmd.len() != 5{
+            cmd.push("");
+
+        }
         let new_msg = match cmd[0] {
             "q" | "quit" | "exit" => break,
             "moves" => game
@@ -66,7 +70,8 @@ fn main_loop(state: &mut State) -> anyhow::Result<()> {
             "move" => {
                 let mv = match game.parse_move(cmd[1]){
                     Err(_) => {
-                        // TODO: proper error handling
+                        let message = state.message.borrow_mut();
+                        message.replace_with(|_| "Incorrect move!".to_string());
                         continue;
                     }
                     Ok(mv) => mv,

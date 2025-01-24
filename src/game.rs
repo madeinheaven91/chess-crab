@@ -36,21 +36,40 @@ pub struct Move {
     end: u32,
     piece: Piece,
     color: Color,
+    promotion: Option<Piece>
 }
 
 impl Display for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let prom = match self.promotion{
+            Some(p) => p.to_string().to_lowercase(),
+            None => "".to_string()
+        };
         write!(
             f,
-            "{}{}",
+            "{}{}{}",
             index_to_square(self.start),
-            index_to_square(self.end)
+            index_to_square(self.end),
+            prom
         )
     }
 }
 
 
-#[derive(Clone, Copy)]
+impl Move {
+    pub fn new(start: u32, end: u32, piece: Piece, color: Color, promotion: Option<Piece>) -> Self{
+        Move {
+            start,
+            end,
+            piece,
+            color,
+            promotion
+        }
+    }
+}
+
+
+#[derive(Clone)]
 pub struct Game {
     pub wk: Bitboard,
     pub wq: Bitboard,
@@ -65,13 +84,13 @@ pub struct Game {
     pub bn: Bitboard,
     pub bp: Bitboard,
     pub turn: Color,
+    pub check: Option<Color>,
     pub white_oo: bool,
     pub white_ooo: bool,
     pub black_oo: bool,
     pub black_ooo: bool,
     pub en_passant: Option<Bitboard>,
-    pub halfmoves: u8,
-    pub fullmoves: u8,
+    pub halfmoves: Vec<Move>
 }
 
 impl Game {
@@ -166,125 +185,122 @@ impl Game {
         match self.turn {
             Color::White => {
                 for p in self.wk {
-                    for m in king_attacks(p, *self, Color::White) {
-                        res.push(Move {
-                            start: p,
-                            end: m,
-                            piece: King,
-                            color: White,
-                        });
+                    for m in king_attacks(p, self, Color::White) {
+                        let mv = Move::new(p, m, King, White, None);
+                        if self.simulate_move(&mv) {
+                            res.push(mv);
+                        }
+
                     }
                 }
                 for p in self.wq {
-                    for m in queen_attacks(p, *self, Color::White) {
-                        res.push(Move {
-                            start: p,
-                            end: m,
-                            piece: Queen,
-                            color: White,
-                        });
+                    for m in queen_attacks(p, self, Color::White) {
+                        let mv = Move::new(p, m, Queen, White, None);
+                        if self.simulate_move(&mv) {
+                            res.push(mv);
+                        }
                     }
                 }
                 for p in self.wr {
-                    for m in rook_attacks(p, *self, Color::White) {
-                        res.push(Move {
-                            start: p,
-                            end: m,
-                            piece: Rook,
-                            color: White,
-                        });
+                    for m in rook_attacks(p, self, Color::White) {
+                        let mv = Move::new(p, m, Rook, White, None);
+                        if self.simulate_move(&mv) {
+                            res.push(mv);
+                        }
                     }
                 }
                 for p in self.wb {
-                    for m in bishop_attacks(p, *self, Color::White) {
-                        res.push(Move {
-                            start: p,
-                            end: m,
-                            piece: Bishop,
-                            color: White,
-                        });
+                    for m in bishop_attacks(p, self, Color::White) {
+                        let mv = Move::new(p, m, Bishop, White, None);
+                        if self.simulate_move(&mv) {
+                            res.push(mv);
+                        }
                     }
                 }
                 for p in self.wn {
-                    for m in knight_attacks(p, *self, Color::White) {
-                        res.push(Move {
-                            start: p,
-                            end: m,
-                            piece: Knight,
-                            color: White,
-                        });
+                    for m in knight_attacks(p, self, Color::White) {
+                        let mv = Move::new(p, m, Knight, White, None);
+                        if self.simulate_move(&mv) {
+                            res.push(mv);
+                        }
                     }
                 }
                 for p in self.wp {
-                    for m in pawn_attacks(p, *self, Color::White) {
-                        res.push(Move {
-                            start: p,
-                            end: m,
-                            piece: Pawn,
-                            color: White,
-                        });
+                    for m in pawn_attacks(p, self, Color::White) {
+                        if m / 8 == 7 {
+                            for piece in Piece::promotable(){
+                                let mv = Move::new(p, m, Pawn, White, Some(piece));
+                                if self.simulate_move(&mv) {
+                                    res.push(mv);
+                                }
+                            }
+                        }else{
+                            let mv = Move::new(p, m, Pawn, White, None);
+                            if self.simulate_move(&mv) {
+                                res.push(mv);
+                            }
+
+                        }
                     }
                 }
             }
             Color::Black => {
                 for p in self.bk {
-                    for m in king_attacks(p, *self, Color::Black) {
-                        res.push(Move {
-                            start: p,
-                            end: m,
-                            piece: King,
-                            color: Black,
-                        });
+                    for m in king_attacks(p, self, Color::Black) {
+                        let mv = Move::new(p, m, King, Black, None);
+                        if self.simulate_move(&mv) {
+                            res.push(mv);
+                        }
                     }
                 }
                 for p in self.bq {
-                    for m in queen_attacks(p, *self, Color::Black) {
-                        res.push(Move {
-                            start: p,
-                            end: m,
-                            piece: Queen,
-                            color: Black,
-                        });
+                    for m in queen_attacks(p, self, Color::Black) {
+                        let mv = Move::new(p, m, Queen, Black, None);
+                        if self.simulate_move(&mv) {
+                            res.push(mv);
+                        }
                     }
                 }
                 for p in self.br {
-                    for m in rook_attacks(p, *self, Color::Black) {
-                        res.push(Move {
-                            start: p,
-                            end: m,
-                            piece: Rook,
-                            color: Black,
-                        });
+                    for m in rook_attacks(p, self, Color::Black) {
+                        let mv = Move::new(p, m, Rook, Black, None);
+                        if self.simulate_move(&mv) {
+                            res.push(mv);
+                        }
                     }
                 }
                 for p in self.bb {
-                    for m in bishop_attacks(p, *self, Color::Black) {
-                        res.push(Move {
-                            start: p,
-                            end: m,
-                            piece: Bishop,
-                            color: Black,
-                        });
+                    for m in bishop_attacks(p, self, Color::Black) {
+                        let mv = Move::new(p, m, Bishop, Black, None);
+                        if self.simulate_move(&mv) {
+                            res.push(mv);
+                        }
                     }
                 }
                 for p in self.bn {
-                    for m in knight_attacks(p, *self, Color::Black) {
-                        res.push(Move {
-                            start: p,
-                            end: m,
-                            piece: Knight,
-                            color: Black,
-                        });
+                    for m in knight_attacks(p, self, Color::Black) {
+                        let mv = Move::new(p, m, Knight, Black, None);
+                        if self.simulate_move(&mv) {
+                            res.push(mv);
+                        }
                     }
                 }
                 for p in self.bp {
-                    for m in pawn_attacks(p, *self, Color::Black) {
-                        res.push(Move {
-                            start: p,
-                            end: m,
-                            piece: Pawn,
-                            color: Black,
-                        });
+                    for m in pawn_attacks(p, self, Color::Black) {
+                        if m / 8 == 0 {
+                            for piece in Piece::promotable(){
+                                let mv = Move::new(p, m, Pawn, Black, Some(piece));
+                                if self.simulate_move(&mv) {
+                                    res.push(mv);
+                                }
+                            }
+                        }else{
+                            let mv = Move::new(p, m, Pawn, Black, None);
+                            if self.simulate_move(&mv) {
+                                res.push(mv);
+                            }
+
+                        }
                     }
                 }
             }
@@ -293,12 +309,12 @@ impl Game {
     }
 
     /// Parses an algebraically notated move into `Move`.
-    /// Returns `None` if the move string is invalid
+    /// Returns Err if the move string is invalid
     // TODO: pawn promotions (e7e8q)
     pub fn parse_move(&self, mv: &str) -> Result<Move, ChessError> {
         use Color::*;
         use Piece::*;
-        if mv.len() != 4 {
+        if mv.len() != 4 && mv.len() != 5 {
             return Err(ChessError::InvalidMove(format!("Invalid move: {}", mv)));
         };
 
@@ -345,14 +361,17 @@ impl Game {
             end,
             piece,
             color,
+            promotion: None
         })
     }
 
-    pub fn make_move(&mut self, mv: &Move) {
-        let mut bitboard = self.get_bitboard(mv.piece, mv.color).num();
+    /// Simulates a halfmove and returns whether it is legal or not
+    pub fn simulate_move(&self, mv: &Move) -> bool{
+        let mut cloned = self.clone();
+        let mut bitboard = cloned.get_bitboard(mv.piece, mv.color).num();
         bitboard &= !(1u64 << mv.start);
         bitboard |= 1u64 << mv.end;
-        self.set_bitboard(
+        cloned.set_bitboard(
             Bitboard::new(bitboard, Some(mv.piece), Some(mv.color)),
             mv.piece,
             mv.color,
@@ -360,32 +379,103 @@ impl Game {
         for piece in Piece::pieces(){
             let piece_bitboard = self.get_bitboard(piece, !mv.color).num();
             if piece_bitboard != piece_bitboard & !(1u64 << mv.end) {
+                cloned.set_bitboard(Bitboard::new(piece_bitboard & !(1u64 << mv.end), Some(piece), Some(!mv.color)), piece, !mv.color);
+            }
+        }
+
+        let king = Bitboard::lsb_index(cloned.get_bitboard(Piece::King, mv.color).num()).unwrap();
+        
+        !cloned.is_check(mv.color)
+    }
+
+    pub fn make_move(&mut self, mv: &Move) {
+        if !self.simulate_move(mv){
+            panic!("Illegal move")
+        }
+        let mut bitboard = self.get_bitboard(mv.piece, mv.color).num();
+        bitboard &= !(1u64 << mv.start);
+        match mv.promotion {
+            None => {
+                bitboard |= 1u64 << mv.end;
+                self.set_bitboard(
+                    Bitboard::new(bitboard, Some(mv.piece), Some(mv.color)),
+                    mv.piece,
+                    mv.color,
+                );
+            }
+
+            Some(promotion) => {
+                let mut promotion_bitboard = self.get_bitboard(promotion, mv.color).num();
+                promotion_bitboard |= 1u64 << mv.end;
+                self.set_bitboard(
+                    Bitboard::new(bitboard, Some(mv.piece), Some(mv.color)),
+                    mv.piece,
+                    mv.color,
+                );
+                self.set_bitboard(
+                    Bitboard::new(promotion_bitboard, Some(promotion), Some(mv.color)),
+                    promotion,
+                    mv.color,
+                );
+            }
+
+        };
+        for piece in Piece::pieces(){
+            let piece_bitboard = self.get_bitboard(piece, !mv.color).num();
+            if piece_bitboard != piece_bitboard & !(1u64 << mv.end) {
                 self.set_bitboard(Bitboard::new(piece_bitboard & !(1u64 << mv.end), Some(piece), Some(!mv.color)), piece, !mv.color);
             }
         }
         self.turn = self.turn.not();
+        self.halfmoves.push(*mv);
+        self.check = if self.is_check(Color::White) {
+            Some(Color::White)
+                }else if self.is_check(Color::Black){
+            Some(Color::Black)
+                } else {
+                None
+            }
     }
 
-    // pub fn is_check(&self, color: Color) -> bool {
-    //     let king = Bitboard::lsb_index(self.get_bitboard(Piece::King, color).num()).unwrap();
-    //     let mut check = false;
-    //     for piece in Piece::pieces(){
-    //         let check_mask = match piece{
-    //             Piece::King => king_attacks(king, *self, color),
-    //             Piece::Queen => queen_attacks(king, *self, color),
-    //             Piece::Rook => rook_attacks(king, *self, color),
-    //             Piece::Bishop => bishop_attacks(king, *self, color),
-    //             Piece::Knight => knight_attacks(king, *self, color),
-    //             Piece::Pawn => pawn_captures(king, *self, color),
-    //         }.num();
-    //         let enemies = self.get_bitboard(piece, !color).num();
-    //         if check_mask & enemies != 0 {
-    //             check = true;
-    //             break;
-    //         }
-    //     };
-    //     check
-    // }
+    pub fn is_check(&self, color: Color) -> bool {
+        let bitboard = self.get_bitboard(Piece::King, color).num();
+        let enemies = match color{
+            Color::White => [self.bp, self.bn, self.bb, self.br, self.bq, self.bk ],
+            Color::Black => [self.wp, self.wn, self.wb, self.wr, self.wq, self.wk ],
+        };
+
+        for pawn in enemies[0] {
+            if bitboard & pawn_captures(pawn, self, !color).num() != 0 {
+                return true;
+            }
+        }
+        for knight in enemies[1] {
+            if bitboard & knight_attacks(knight, self, !color).num() != 0 {
+                return true;
+            }
+        }
+        for bishop in enemies[2] {
+            if bitboard & bishop_attacks(bishop, self, !color).num() != 0 {
+                return true;
+            }
+        }
+        for rook in enemies[3] {
+            if bitboard & rook_attacks(rook, self, !color).num() != 0 {
+                return true;
+            }
+        }
+        for queen in enemies[4] {
+            if bitboard & queen_attacks(queen, self, !color).num() != 0 {
+                return true;
+            }
+        }
+        for king in enemies[5] {
+            if bitboard & king_attacks(king, self, !color).num() != 0 {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 impl Default for Game {
@@ -406,13 +496,13 @@ impl Default for Game {
             bn: Bitboard::new(BN, Some(King), Some(White)),
             bp: Bitboard::new(BP, Some(King), Some(White)),
             turn: Color::White,
+            check: None,
             white_oo: true,
             white_ooo: true,
             black_oo: true,
             black_ooo: true,
             en_passant: None,
-            halfmoves: 0,
-            fullmoves: 0,
+            halfmoves: Vec::new(),
         }
     }
 }
@@ -465,6 +555,12 @@ impl Display for Game {
         writeln!(f, "+---+---+---+---+---+---+---+---+")?;
         writeln!(f, "  a   b   c   d   e   f   g   h  ")?;
         writeln!(f, "\nMove: {:?}", self.turn)?;
+        if self.check.is_some(){
+            match self.check.unwrap() {
+                Color::White => writeln!(f, "White checked!")?,
+                Color::Black => writeln!(f, "Black checked!")?,
+            }
+        }
         Ok(())
     }
 }
@@ -487,13 +583,13 @@ impl Game{
             bn: Bitboard::new(0, Some(King), Some(White)),
             bp: Bitboard::new(0, Some(King), Some(White)),
             turn: Color::White,
+            check: None,
             white_oo: true,
             white_ooo: true,
             black_oo: true,
             black_ooo: true,
             en_passant: None,
-            halfmoves: 0,
-            fullmoves: 0,
+            halfmoves: Vec::new(),
         }
     }
 }
