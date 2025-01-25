@@ -2,7 +2,8 @@ use crate::{
     bitboard::{Bitboard, Piece},
     errors::ChessError,
     masks::{
-        bishop_attacks, king_attacks, knight_attacks, pawn_attacks, pawn_captures, queen_attacks, rook_attacks
+        bishop_attacks, king_attacks, knight_attacks, pawn_attacks, pawn_captures, queen_attacks,
+        rook_attacks,
     },
     shared::*,
 };
@@ -14,8 +15,8 @@ pub enum Color {
     Black,
 }
 
-impl Color{
-    pub fn colors() -> [Color; 2]{
+impl Color {
+    pub fn colors() -> [Color; 2] {
         [Color::White, Color::Black]
     }
 }
@@ -36,14 +37,14 @@ pub struct Move {
     end: u32,
     piece: Piece,
     color: Color,
-    promotion: Option<Piece>
+    promotion: Option<Piece>,
 }
 
 impl Display for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let prom = match self.promotion{
+        let prom = match self.promotion {
             Some(p) => p.to_string().to_lowercase(),
-            None => "".to_string()
+            None => "".to_string(),
         };
         write!(
             f,
@@ -55,19 +56,17 @@ impl Display for Move {
     }
 }
 
-
 impl Move {
-    pub fn new(start: u32, end: u32, piece: Piece, color: Color, promotion: Option<Piece>) -> Self{
+    pub fn new(start: u32, end: u32, piece: Piece, color: Color, promotion: Option<Piece>) -> Self {
         Move {
             start,
             end,
             piece,
             color,
-            promotion
+            promotion,
         }
     }
 }
-
 
 #[derive(Clone)]
 pub struct Game {
@@ -90,7 +89,7 @@ pub struct Game {
     pub black_oo: bool,
     pub black_ooo: bool,
     pub en_passant: Option<Bitboard>,
-    pub halfmoves: Vec<Move>
+    pub halfmoves: Vec<Move>,
 }
 
 impl Game {
@@ -190,7 +189,6 @@ impl Game {
                         if self.simulate_move(&mv) {
                             res.push(mv);
                         }
-
                     }
                 }
                 for p in self.wq {
@@ -228,18 +226,17 @@ impl Game {
                 for p in self.wp {
                     for m in pawn_attacks(p, self, Color::White) {
                         if m / 8 == 7 {
-                            for piece in Piece::promotable(){
+                            for piece in Piece::promotable() {
                                 let mv = Move::new(p, m, Pawn, White, Some(piece));
                                 if self.simulate_move(&mv) {
                                     res.push(mv);
                                 }
                             }
-                        }else{
+                        } else {
                             let mv = Move::new(p, m, Pawn, White, None);
                             if self.simulate_move(&mv) {
                                 res.push(mv);
                             }
-
                         }
                     }
                 }
@@ -288,18 +285,17 @@ impl Game {
                 for p in self.bp {
                     for m in pawn_attacks(p, self, Color::Black) {
                         if m / 8 == 0 {
-                            for piece in Piece::promotable(){
+                            for piece in Piece::promotable() {
                                 let mv = Move::new(p, m, Pawn, Black, Some(piece));
                                 if self.simulate_move(&mv) {
                                     res.push(mv);
                                 }
                             }
-                        }else{
+                        } else {
                             let mv = Move::new(p, m, Pawn, Black, None);
                             if self.simulate_move(&mv) {
                                 res.push(mv);
                             }
-
                         }
                     }
                 }
@@ -314,59 +310,118 @@ impl Game {
     pub fn parse_move(&self, mv: &str) -> Result<Move, ChessError> {
         use Color::*;
         use Piece::*;
-        if mv.len() != 4 && mv.len() != 5 {
-            return Err(ChessError::InvalidMove(format!("Invalid move: {}", mv)));
-        };
+        match mv.len() {
+            4 => {
+                let (start, end) = mv.split_at(2);
+                let start = square_to_index(start);
+                let end = square_to_index(end);
 
-        let (start, end) = mv.split_at(2);
-        let start = square_to_index(start);
-        let end = square_to_index(end);
+                // Find piece
+                let (piece, color) = {
+                    if self.wk.num() & (1 << start) != 0 {
+                        (King, White)
+                    } else if self.wq.num() & (1 << start) != 0 {
+                        (Queen, White)
+                    } else if self.wr.num() & (1 << start) != 0 {
+                        (Rook, White)
+                    } else if self.wb.num() & (1 << start) != 0 {
+                        (Bishop, White)
+                    } else if self.wn.num() & (1 << start) != 0 {
+                        (Knight, White)
+                    } else if self.wp.num() & (1 << start) != 0 {
+                        (Pawn, White)
+                    } else if self.bk.num() & (1 << start) != 0 {
+                        (King, Black)
+                    } else if self.bq.num() & (1 << start) != 0 {
+                        (Queen, Black)
+                    } else if self.br.num() & (1 << start) != 0 {
+                        (Rook, Black)
+                    } else if self.bb.num() & (1 << start) != 0 {
+                        (Bishop, Black)
+                    } else if self.bn.num() & (1 << start) != 0 {
+                        (Knight, Black)
+                    } else if self.bp.num() & (1 << start) != 0 {
+                        (Pawn, Black)
+                    } else {
+                        return Err(ChessError::InvalidMove(format!(
+                            "No pieces can make move: {}",
+                            mv
+                        )));
+                    }
+                };
 
-        // Find piece
-        let (piece, color) = {
-            if self.wk.num() & (1 << start) != 0 {
-                (King, White)
-            } else if self.wq.num() & (1 << start) != 0 {
-                (Queen, White)
-            } else if self.wr.num() & (1 << start) != 0 {
-                (Rook, White)
-            } else if self.wb.num() & (1 << start) != 0 {
-                (Bishop, White)
-            } else if self.wn.num() & (1 << start) != 0 {
-                (Knight, White)
-            } else if self.wp.num() & (1 << start) != 0 {
-                (Pawn, White)
-            } else if self.bk.num() & (1 << start) != 0 {
-                (King, Black)
-            } else if self.bq.num() & (1 << start) != 0 {
-                (Queen, Black)
-            } else if self.br.num() & (1 << start) != 0 {
-                (Rook, Black)
-            } else if self.bb.num() & (1 << start) != 0 {
-                (Bishop, Black)
-            } else if self.bn.num() & (1 << start) != 0 {
-                (Knight, Black)
-            } else if self.bp.num() & (1 << start) != 0 {
-                (Pawn, Black)
-            } else {
-                return Err(ChessError::InvalidMove(format!(
-                    "No pieces can make move: {}",
-                    mv
-                )));
+                Ok(Move {
+                    start,
+                    end,
+                    piece,
+                    color,
+                    promotion: None,
+                })
             }
-        };
+            5 => {
+                let chars = mv.chars().collect::<Vec<char>>();
+                let start = square_to_index(&chars[0..2].iter().collect::<String>());
+                let end = square_to_index(&chars[2..4].iter().collect::<String>());
+                let promotion = match chars[4] {
+                    'q' => Some(Queen),
+                    'r' => Some(Rook),
+                    'b' => Some(Bishop),
+                    'n' => Some(Knight),
+                    _ => return Err(ChessError::InvalidMove(format!("Invalid move: {}", mv))),
+                };
 
-        Ok(Move {
-            start,
-            end,
-            piece,
-            color,
-            promotion: None
-        })
+                // Find piece
+                let (piece, color) = {
+                    if self.wk.num() & (1 << start) != 0 {
+                        (King, White)
+                    } else if self.wq.num() & (1 << start) != 0 {
+                        (Queen, White)
+                    } else if self.wr.num() & (1 << start) != 0 {
+                        (Rook, White)
+                    } else if self.wb.num() & (1 << start) != 0 {
+                        (Bishop, White)
+                    } else if self.wn.num() & (1 << start) != 0 {
+                        (Knight, White)
+                    } else if self.wp.num() & (1 << start) != 0 {
+                        (Pawn, White)
+                    } else if self.bk.num() & (1 << start) != 0 {
+                        (King, Black)
+                    } else if self.bq.num() & (1 << start) != 0 {
+                        (Queen, Black)
+                    } else if self.br.num() & (1 << start) != 0 {
+                        (Rook, Black)
+                    } else if self.bb.num() & (1 << start) != 0 {
+                        (Bishop, Black)
+                    } else if self.bn.num() & (1 << start) != 0 {
+                        (Knight, Black)
+                    } else if self.bp.num() & (1 << start) != 0 {
+                        (Pawn, Black)
+                    } else {
+                        return Err(ChessError::InvalidMove(format!(
+                            "No pieces can make move: {}",
+                            mv
+                        )));
+                    }
+                };
+
+                if piece != Pawn {
+                    return Err(ChessError::InvalidMove(format!("Invalid move: {}", mv)));
+                }
+
+                Ok(Move {
+                    start,
+                    end,
+                    piece: Pawn,
+                    color,
+                    promotion,
+                })
+            }
+            _ => Err(ChessError::InvalidMove(format!("Invalid move: {}", mv))),
+        }
     }
 
     /// Simulates a halfmove and returns whether it is legal or not
-    pub fn simulate_move(&self, mv: &Move) -> bool{
+    pub fn simulate_move(&self, mv: &Move) -> bool {
         let mut cloned = self.clone();
         let mut bitboard = cloned.get_bitboard(mv.piece, mv.color).num();
         bitboard &= !(1u64 << mv.start);
@@ -376,20 +431,26 @@ impl Game {
             mv.piece,
             mv.color,
         );
-        for piece in Piece::pieces(){
+        for piece in Piece::pieces() {
             let piece_bitboard = self.get_bitboard(piece, !mv.color).num();
             if piece_bitboard != piece_bitboard & !(1u64 << mv.end) {
-                cloned.set_bitboard(Bitboard::new(piece_bitboard & !(1u64 << mv.end), Some(piece), Some(!mv.color)), piece, !mv.color);
+                cloned.set_bitboard(
+                    Bitboard::new(
+                        piece_bitboard & !(1u64 << mv.end),
+                        Some(piece),
+                        Some(!mv.color),
+                    ),
+                    piece,
+                    !mv.color,
+                );
             }
         }
 
-        let king = Bitboard::lsb_index(cloned.get_bitboard(Piece::King, mv.color).num()).unwrap();
-        
         !cloned.is_check(mv.color)
     }
 
     pub fn make_move(&mut self, mv: &Move) {
-        if !self.simulate_move(mv){
+        if !self.simulate_move(mv) {
             panic!("Illegal move")
         }
         let mut bitboard = self.get_bitboard(mv.piece, mv.color).num();
@@ -418,30 +479,37 @@ impl Game {
                     mv.color,
                 );
             }
-
         };
-        for piece in Piece::pieces(){
+        for piece in Piece::pieces() {
             let piece_bitboard = self.get_bitboard(piece, !mv.color).num();
             if piece_bitboard != piece_bitboard & !(1u64 << mv.end) {
-                self.set_bitboard(Bitboard::new(piece_bitboard & !(1u64 << mv.end), Some(piece), Some(!mv.color)), piece, !mv.color);
+                self.set_bitboard(
+                    Bitboard::new(
+                        piece_bitboard & !(1u64 << mv.end),
+                        Some(piece),
+                        Some(!mv.color),
+                    ),
+                    piece,
+                    !mv.color,
+                );
             }
         }
         self.turn = self.turn.not();
         self.halfmoves.push(*mv);
         self.check = if self.is_check(Color::White) {
             Some(Color::White)
-                }else if self.is_check(Color::Black){
+        } else if self.is_check(Color::Black) {
             Some(Color::Black)
-                } else {
-                None
-            }
+        } else {
+            None
+        }
     }
 
     pub fn is_check(&self, color: Color) -> bool {
         let bitboard = self.get_bitboard(Piece::King, color).num();
-        let enemies = match color{
-            Color::White => [self.bp, self.bn, self.bb, self.br, self.bq, self.bk ],
-            Color::Black => [self.wp, self.wn, self.wb, self.wr, self.wq, self.wk ],
+        let enemies = match color {
+            Color::White => [self.bp, self.bn, self.bb, self.br, self.bq, self.bk],
+            Color::Black => [self.wp, self.wn, self.wb, self.wr, self.wq, self.wk],
         };
 
         for pawn in enemies[0] {
@@ -508,7 +576,8 @@ impl Default for Game {
 }
 
 impl Display for Game {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { let mut pieces: [char; 64] = [' '; 64];
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut pieces: [char; 64] = [' '; 64];
         for p in self.wk {
             pieces[p as usize] = 'K';
         }
@@ -555,7 +624,7 @@ impl Display for Game {
         writeln!(f, "+---+---+---+---+---+---+---+---+")?;
         writeln!(f, "  a   b   c   d   e   f   g   h  ")?;
         writeln!(f, "\nMove: {:?}", self.turn)?;
-        if self.check.is_some(){
+        if self.check.is_some() {
             match self.check.unwrap() {
                 Color::White => writeln!(f, "White checked!")?,
                 Color::Black => writeln!(f, "Black checked!")?,
@@ -565,8 +634,8 @@ impl Display for Game {
     }
 }
 
-impl Game{
-    pub fn empty() -> Game{
+impl Game {
+    pub fn empty() -> Game {
         use Color::*;
         use Piece::*;
         Game {
