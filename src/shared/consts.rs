@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
+use super::functions::lsb_index;
 
-use crate::bitboard::Bitboard;
 
 // RANKS
 pub const RANK_8: u64 = 0b1111111100000000000000000000000000000000000000000000000000000000;
@@ -23,7 +23,6 @@ pub const FILE_B: u64 = 0b000000100000001000000010000000100000001000000010000000
 pub const FILE_A: u64 = 0b0000000100000001000000010000000100000001000000010000000100000001;
 
 // DEFAULT PIECES
-
 pub const WK: u64 = 0b0000000000000000000000000000000000000000000000000000000000010000;
 pub const WQ: u64 = 0b0000000000000000000000000000000000000000000000000000000000001000;
 pub const WR: u64 = 0b0000000000000000000000000000000000000000000000000000000010000001;
@@ -39,12 +38,24 @@ pub const BP: u64 = 0b0000000011111111000000000000000000000000000000000000000000
 
 // RAY
 lazy_static! {
+    /// RAY[square][direction]
     pub static ref RAY: [[u64; 8]; 64] = {
         let mut res = [[0; 8]; 64];
         (0..64).for_each(|i| {
             (0..8).for_each(|j| {
                 let direction = DIRECTION::from(j);
-                res[i][j] = gen_ray(1u64 << i, direction);
+                res[i][j] = gen_ray(i as u32, direction);
+            });
+        });
+        res
+    };
+
+    pub static ref INCL_RAY: [[u64; 8]; 64] = {
+        let mut res = [[0; 8]; 64];
+        (0..64).for_each(|i| {
+            (0..8).for_each(|j| {
+                let direction = DIRECTION::from(j);
+                res[i][j] = gen_incl_ray(i as u32, direction);
             });
         });
         res
@@ -92,42 +103,16 @@ impl From<DIRECTION> for usize {
     }
 }
 
-pub fn col(square: u64) -> u64 {
-    match (square.trailing_zeros()) % 8 {
-        7 => FILE_A,
-        6 => FILE_B,
-        5 => FILE_C,
-        4 => FILE_D,
-        3 => FILE_E,
-        2 => FILE_F,
-        1 => FILE_G,
-        _ => FILE_H,
-    }
-}
-
-pub fn row(square: u64) -> u64 {
-    match (square.trailing_zeros()) / 8 {
-        7 => RANK_8,
-        6 => RANK_7,
-        5 => RANK_6,
-        4 => RANK_5,
-        3 => RANK_4,
-        2 => RANK_3,
-        1 => RANK_2,
-        _ => RANK_1,
-    }
-}
 
 // FIXME: find better solutions
 // if square param contains more than 1 significant bit, function works incorrectly
-// make rays static
-pub fn gen_ray(square: u64, direction: DIRECTION) -> u64 {
+fn gen_ray(square: u32, direction: DIRECTION) -> u64 {
     use DIRECTION::*;
-    if square == 0 {
+    if !(0..64).contains(&square) {
         return 0;
-    };
+    }
+    let square = 1u64 << square;
     match direction {
-        // TODO: not optimal solution, find a better one
         N => {
             square << 8
                 | square << 16
@@ -146,16 +131,15 @@ pub fn gen_ray(square: u64, direction: DIRECTION) -> u64 {
                 | square >> 48
                 | square >> 56
         }
-        // TODO: loops are slow, need to find a better way
         E => {
             let mut res = square;
-            let rank = Bitboard::lsb_index(square).unwrap() / 8;
+            let rank = lsb_index(square).unwrap() / 8;
             for i in 0..8 {
                 let new_bit = square << i;
                 if new_bit == 0 {
                     break;
                 }
-                if Bitboard::lsb_index(new_bit).unwrap() / 8 != rank {
+                if lsb_index(new_bit).unwrap() / 8 != rank {
                     break;
                 }
                 res |= new_bit;
@@ -164,13 +148,13 @@ pub fn gen_ray(square: u64, direction: DIRECTION) -> u64 {
         }
         W => {
             let mut res = square;
-            let rank = Bitboard::lsb_index(square).unwrap() / 8;
+            let rank = lsb_index(square).unwrap() / 8;
             for i in 0..8 {
                 let new_bit = square >> i;
                 if new_bit == 0 {
                     break;
                 }
-                if Bitboard::lsb_index(new_bit).unwrap() / 8 != rank {
+                if lsb_index(new_bit).unwrap() / 8 != rank {
                     break;
                 }
                 res |= new_bit;
@@ -184,7 +168,7 @@ pub fn gen_ray(square: u64, direction: DIRECTION) -> u64 {
                 if new_bit == 0 {
                     break;
                 }
-                if Bitboard::lsb_index(new_bit).unwrap() % 8 == 7 {
+                if lsb_index(new_bit).unwrap() % 8 == 7 {
                     break;
                 }
                 res |= new_bit;
@@ -198,7 +182,7 @@ pub fn gen_ray(square: u64, direction: DIRECTION) -> u64 {
                 if new_bit == 0 {
                     break;
                 }
-                if Bitboard::lsb_index(new_bit).unwrap() % 8 == 7 {
+                if lsb_index(new_bit).unwrap() % 8 == 7 {
                     break;
                 }
                 res |= new_bit;
@@ -212,7 +196,7 @@ pub fn gen_ray(square: u64, direction: DIRECTION) -> u64 {
                 if new_bit == 0 {
                     break;
                 }
-                if Bitboard::lsb_index(new_bit).unwrap() % 8 == 0 {
+                if lsb_index(new_bit).unwrap() % 8 == 0 {
                     break;
                 }
                 res |= new_bit;
@@ -226,7 +210,7 @@ pub fn gen_ray(square: u64, direction: DIRECTION) -> u64 {
                 if new_bit == 0 {
                     break;
                 }
-                if Bitboard::lsb_index(new_bit).unwrap() % 8 == 0 {
+                if lsb_index(new_bit).unwrap() % 8 == 0 {
                     break;
                 }
                 res |= new_bit;
@@ -236,30 +220,8 @@ pub fn gen_ray(square: u64, direction: DIRECTION) -> u64 {
     }
 }
 
-pub fn square_to_index(square: &str) -> u32 {
-    if square.len() != 2 {
-        panic!("Incorrect square")
-    };
-    let letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    let ranks = ['1', '2', '3', '4', '5', '6', '7', '8'];
-    let rank = ranks
-        .iter()
-        .position(|&x| x == square.chars().nth(1).unwrap())
-        .unwrap() as u32;
-    let letter = letters
-        .iter()
-        .position(|&x| x == square.chars().next().unwrap())
-        .unwrap() as u32;
-    rank * 8 + letter
-}
 
-pub fn index_to_square(index: u32) -> String {
-    if !(0..64).contains(&index) {
-        panic!()
-    };
-    let letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    let ranks = ['1', '2', '3', '4', '5', '6', '7', '8'];
-    let rank = ranks[(index / 8) as usize];
-    let letter = letters[(index % 8) as usize];
-    format!("{}{}", letter, rank)
+fn gen_incl_ray(square: u32, direction: DIRECTION) -> u64 {
+    let ray = gen_ray(square, direction);
+    ray | (1u64 << square)
 }

@@ -1,11 +1,12 @@
-use crate::{
+use crate::shared::{consts::{BB, BK, BN, BP, BQ, BR, WB, WK, WN, WP, WQ, WR}, functions::{index_to_square, square_to_index}};
+
+use super::{
     bitboard::{Bitboard, Piece},
     errors::ChessError,
     masks::{
         bishop_attacks, king_attacks, knight_attacks, pawn_attacks, pawn_captures, queen_attacks,
         rook_attacks,
     },
-    shared::*,
 };
 use std::{fmt::Display, ops::Not};
 

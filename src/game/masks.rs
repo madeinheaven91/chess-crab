@@ -1,8 +1,9 @@
-use crate::{
+use super::{
     bitboard::Bitboard,
-    game::{Color, Game},
-    shared::{DIRECTION, FILE_A, FILE_B, FILE_G, FILE_H, RANK_2, RANK_7, RAY},
+    structs::{Color, Game},
 };
+
+use crate::shared::{consts::{DIRECTION, FILE_A, FILE_B, FILE_G, FILE_H, RANK_2, RANK_7, RAY}, functions::{lsb_index, msb_index}};
 
 pub fn pawn_advances(pawn: u32, game: &Game, color: Color) -> Bitboard {
     let pawn = 1u64 << pawn;
@@ -58,7 +59,7 @@ pub fn rook_attacks(index: u32, game: &Game, color: Color) -> Bitboard {
 
     let blockers = friends | (enemies << 1);
     let east = RAY[index as usize][E as usize];
-    let east_blocker = Bitboard::lsb_index(blockers & east);
+    let east_blocker = lsb_index(blockers & east);
     let east_scan = match east_blocker {
         Some(east_blocker) => {
             east & !(1u64 << east_blocker) & !RAY[east_blocker as usize][E as usize]
@@ -68,7 +69,7 @@ pub fn rook_attacks(index: u32, game: &Game, color: Color) -> Bitboard {
 
     let blockers = friends | (enemies >> 1);
     let west = RAY[index as usize][W as usize];
-    let west_blocker = Bitboard::msb_index(blockers & west);
+    let west_blocker = msb_index(blockers & west);
     let west_scan = match west_blocker {
         Some(west_blocker) => {
             west & !(1u64 << west_blocker) & !RAY[west_blocker as usize][W as usize]
@@ -78,7 +79,7 @@ pub fn rook_attacks(index: u32, game: &Game, color: Color) -> Bitboard {
 
     let blockers = friends | (enemies << 8);
     let north = RAY[index as usize][N as usize];
-    let north_blocker = Bitboard::lsb_index(blockers & north);
+    let north_blocker = lsb_index(blockers & north);
     let north_scan = match north_blocker {
         Some(north_blocker) => {
             north & !(1u64 << north_blocker) & !RAY[north_blocker as usize][N as usize]
@@ -88,7 +89,7 @@ pub fn rook_attacks(index: u32, game: &Game, color: Color) -> Bitboard {
 
     let blockers = friends | (enemies >> 8);
     let south = RAY[index as usize][S as usize];
-    let south_blocker = Bitboard::msb_index(blockers & south);
+    let south_blocker = msb_index(blockers & south);
     let south_scan = match south_blocker {
         Some(south_blocker) => {
             south & !(1u64 << south_blocker) & !RAY[south_blocker as usize][S as usize]
@@ -106,7 +107,7 @@ pub fn bishop_attacks(bishop: u32, game: &Game, color: Color) -> Bitboard {
 
     let blockers = friends | enemies << 9;
     let ne = RAY[bishop as usize][NE as usize];
-    let ne_blocker = Bitboard::lsb_index(blockers & ne);
+    let ne_blocker = lsb_index(blockers & ne);
     let ne_scan = match ne_blocker {
         Some(ne_blocker) => ne & !(1u64 << ne_blocker) & !RAY[ne_blocker as usize][NE as usize],
         None => ne,
@@ -114,7 +115,7 @@ pub fn bishop_attacks(bishop: u32, game: &Game, color: Color) -> Bitboard {
 
     let blockers = friends | enemies >> 9;
     let sw = RAY[bishop as usize][SW as usize];
-    let sw_blocker = Bitboard::msb_index(blockers & sw);
+    let sw_blocker = msb_index(blockers & sw);
     let sw_scan = match sw_blocker {
         Some(sw_blocker) => sw & !(1u64 << sw_blocker) & !RAY[sw_blocker as usize][SW as usize],
         None => sw,
@@ -122,7 +123,7 @@ pub fn bishop_attacks(bishop: u32, game: &Game, color: Color) -> Bitboard {
 
     let blockers = friends | enemies << 7;
     let nw = RAY[bishop as usize][NW as usize];
-    let nw_blocker = Bitboard::lsb_index(blockers & nw);
+    let nw_blocker = lsb_index(blockers & nw);
     let nw_scan = match nw_blocker {
         Some(nw_blocker) => nw & !(1u64 << nw_blocker) & !RAY[nw_blocker as usize][NW as usize],
         None => nw,
@@ -130,7 +131,7 @@ pub fn bishop_attacks(bishop: u32, game: &Game, color: Color) -> Bitboard {
 
     let blockers = friends | enemies >> 7;
     let se = RAY[bishop as usize][SE as usize];
-    let se_blocker = Bitboard::msb_index(blockers & se);
+    let se_blocker = msb_index(blockers & se);
     let se_scan = match se_blocker {
         Some(se_blocker) => se & !(1u64 << se_blocker) & !RAY[se_blocker as usize][SE as usize],
         None => se,

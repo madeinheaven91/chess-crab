@@ -6,7 +6,8 @@ use std::{
     },
 };
 
-use crate::game::Color;
+use super::structs::Color;
+
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Piece {
@@ -75,29 +76,6 @@ impl Bitboard {
         ((self.num >> index) % 2) as u32
     }
 
-    pub fn lsb_index(bitboard: u64) -> Option<u32> {
-        match bitboard {
-            0 => None,
-            _ => Some(bitboard.trailing_zeros()),
-        }
-    }
-
-    pub fn msb_index(bitboard: u64) -> Option<u32> {
-        match bitboard {
-            0 => None,
-            _ => Some(63 - bitboard.leading_zeros()),
-        }
-    }
-
-    pub fn lsb(bitboard: u64) -> Option<u64> {
-        let index = Self::lsb_index(bitboard)?;
-        Some(1u64 << index)
-    }
-    //
-    pub fn msb(bitboard: u64) -> Option<u64> {
-        let index = Self::msb_index(bitboard)?;
-        1u64.checked_shl(index)
-    }
 }
 
 // Bitboards are mapped in a Little-Endian Rank-File style

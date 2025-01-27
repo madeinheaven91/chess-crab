@@ -1,6 +1,6 @@
-use crate::{
+use crate::game::{
     bitboard::{Bitboard, Piece},
-    game::{Color, Game, Move},
+    structs::{Color, Game, Move},
     masks::{bishop_attacks, king_attacks, knight_attacks, pawn_attacks, rook_attacks},
 };
 
