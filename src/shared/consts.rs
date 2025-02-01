@@ -1,6 +1,16 @@
 use lazy_static::lazy_static;
 use super::functions::lsb_index;
 
+// INDICES
+// pub const PAWN: usize = 0;
+// pub const KNIGHT: usize = 1;
+// pub const BISHOP: usize = 2;
+// pub const ROOK: usize = 3;
+// pub const QUEEN: usize = 4;
+// pub const KING: usize = 5;
+//
+// pub const WHITE: usize = 0;
+// pub const BLACK: usize = 1;
 
 // RANKS
 pub const RANK_8: u64 = 0b1111111100000000000000000000000000000000000000000000000000000000;

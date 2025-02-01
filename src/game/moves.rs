@@ -1,11 +1,8 @@
-use super::{
-    bitboard::Bitboard,
-    structs::{Color, Game},
-};
-
 use crate::shared::{consts::{DIRECTION, FILE_A, FILE_B, FILE_G, FILE_H, RANK_2, RANK_7, RAY}, functions::{lsb_index, msb_index}};
 
-pub fn pawn_advances(pawn: u32, game: &Game, color: Color) -> Bitboard {
+use super::structs::{bitboard::Bitboard, color::Color, game::Game, piece::Piece};
+
+pub fn pawn_advances(pawn: u32, game: &Game, color: Color) -> Bitboard{
     let pawn = 1u64 << pawn;
     let blockers = game.all_pieces().num() & !pawn;
     let advances = match color {
@@ -16,33 +13,67 @@ pub fn pawn_advances(pawn: u32, game: &Game, color: Color) -> Bitboard {
 }
 
 pub fn pawn_captures(pawn: u32, game: &Game, color: Color) -> Bitboard {
-    let enemies = game.opposite_pieces(color).num();
+    let enemies = game.enemies(color).num();
     let pawn = 1u64 << pawn;
     let captures = match color {
         Color::White => ((pawn << 9) & !FILE_A) | ((pawn << 7) & !FILE_H),
         Color::Black => ((pawn >> 9) & !FILE_H) | ((pawn >> 7) & !FILE_A),
     };
-    let captures = captures & enemies;
+    let en_passant = match game.en_passant {
+        Some(en_passant) => 1u64 << en_passant,
+        None => 0
+    };
+    let captures = captures & (enemies | en_passant);
     Bitboard::from(captures)
 }
 
-pub fn pawn_attacks(pawn: u32, game: &Game, color: Color) -> Bitboard {
+pub fn pawn_moves(pawn: u32, game: &Game, color: Color) -> Bitboard {
     pawn_advances(pawn, game, color) | pawn_captures(pawn, game, color)
 }
 
-pub fn king_attacks(king: u32, game: &Game, color: Color) -> Bitboard {
+pub fn all_pawn_advances(pawns: u64, game: &Game, color: Color) -> Bitboard {
+    let blockers = game.all_pieces().num() & !pawns;
+    let advances = match color {
+        Color::White => (((pawns & RANK_2) << 16) & !(blockers << 8)) | (pawns << 8),
+        Color::Black => (((pawns & RANK_7) >> 16) & !(blockers >> 8)) | (pawns >> 8),
+    } & !blockers;
+    Bitboard::from(advances)
+}
+
+pub fn all_pawn_captures(pawns: u64, game: &Game, color: Color) -> Bitboard {
+    let enemies = game.enemies(color).num();
+    let captures = match color {
+        Color::White => ((pawns << 9) & !FILE_A) | ((pawns << 7) & !FILE_H),
+        Color::Black => ((pawns >> 9) & !FILE_H) | ((pawns >> 7) & !FILE_A),
+    };
+    let en_passant = match game.en_passant {
+        Some(en_passant) => 1u64 << en_passant,
+        None => 0
+    };
+    let captures = captures & (enemies | en_passant);
+    Bitboard::from(captures)
+}
+
+pub fn all_pawns_moves(pawns: u64, game: &Game, color: Color) -> Bitboard {
+    all_pawn_advances(pawns, game, color) | all_pawn_captures(pawns, game, color)
+}
+
+
+pub fn king_moves(king: u32, game: &Game, color: Color) -> Bitboard {
     let bnum = 1u64 << king;
-    let blockers = game.own_pieces(color).num() & !bnum;
+    let blockers = game.friends(color).num() & !bnum;
     let moves = bnum >> 8
         | bnum << 8
         | ((bnum >> 1 | bnum >> 9 | bnum << 7) & !FILE_H)
         | ((bnum >> 7 | bnum << 1 | bnum << 9) & !FILE_A);
-    Bitboard::from(moves & !blockers)
+    let moves = moves & !blockers;
+
+    Bitboard::from(moves)
 }
 
-pub fn knight_attacks(knight: u32, game: &Game, color: Color) -> Bitboard {
+pub fn knight_moves(knight: u32, game: &Game, color: Color) -> Bitboard {
     let bnum = 1u64 << knight;
-    let blockers = game.own_pieces(color).num() & !bnum;
+    let blockers = game.friends(color).num() & !bnum;
     let moves = ((bnum >> 17 | bnum << 15) & !FILE_H)
         | ((bnum >> 15 | bnum << 17) & !FILE_A)
         | ((bnum >> 10 | bnum << 6) & !FILE_H & !FILE_G)
@@ -52,10 +83,10 @@ pub fn knight_attacks(knight: u32, game: &Game, color: Color) -> Bitboard {
 
 // FIXME: match clauses because bit scans could be empty, which is bad performance-wise.
 // Somehow it needs to be fixed
-pub fn rook_attacks(index: u32, game: &Game, color: Color) -> Bitboard {
+pub fn rook_moves(index: u32, game: &Game, color: Color) -> Bitboard {
     use DIRECTION::*;
-    let friends = game.own_pieces(color).num();
-    let enemies = game.opposite_pieces(color).num();
+    let friends = game.friends(color).num();
+    let enemies = game.enemies(color).num();
 
     let blockers = friends | (enemies << 1);
     let east = RAY[index as usize][E as usize];
@@ -100,10 +131,10 @@ pub fn rook_attacks(index: u32, game: &Game, color: Color) -> Bitboard {
     Bitboard::from(west_scan | east_scan | north_scan | south_scan)
 }
 
-pub fn bishop_attacks(bishop: u32, game: &Game, color: Color) -> Bitboard {
+pub fn bishop_moves(bishop: u32, game: &Game, color: Color) -> Bitboard {
     use DIRECTION::*;
-    let friends = game.own_pieces(color).num();
-    let enemies = game.opposite_pieces(color).num();
+    let friends = game.friends(color).num();
+    let enemies = game.enemies(color).num();
 
     let blockers = friends | enemies << 9;
     let ne = RAY[bishop as usize][NE as usize];
@@ -140,7 +171,13 @@ pub fn bishop_attacks(bishop: u32, game: &Game, color: Color) -> Bitboard {
     Bitboard::from(sw_scan | ne_scan | nw_scan | se_scan)
 }
 
-pub fn queen_attacks(queen: u32, game: &Game, color: Color) -> Bitboard {
-    bishop_attacks(queen, game, color) | rook_attacks(queen, game, color)
+pub fn queen_moves(queen: u32, game: &Game, color: Color) -> Bitboard {
+    bishop_moves(queen, game, color) | rook_moves(queen, game, color)
+}
+
+pub fn check_en_passant(pawn: u32, game: &Game, color: Color) -> bool {
+    let enemy_pawns = game.pieces[!color][Piece::Pawn].num();
+    let pawn = 1u64 << pawn;
+    (enemy_pawns & (pawn << 1)) != 0 || (enemy_pawns & (pawn >> 1)) != 0
 }
 

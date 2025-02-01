@@ -1,13 +1,13 @@
-use std::{
-    borrow::BorrowMut, io::{stdout, Write}, ops::Deref
-};
+use std::
+    io::stdout
+;
 
 use cli::state::{main_loop, State};
 use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen},
 };
-use game::structs::Game;
+use game::structs::game::Game;
 
 pub mod game;
 pub mod shared;

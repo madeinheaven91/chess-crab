@@ -1,20 +1,27 @@
 use super::consts::{FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8};
+use crate::shared::errors::ChessError;
 
-pub fn square_to_index(square: &str) -> u32 {
-    if square.len() != 2 {
-        panic!("Incorrect square")
-    };
-    let letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+pub fn square_to_index(square: &str) -> Result<u32, ChessError>{
+    let files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     let ranks = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
+    let file = files
+        .iter()
+        .position(|&x| x == square.chars().next().unwrap());
+    let file = match file {
+        None => return Err(ChessError::SquareParseError(square.to_string())),
+        Some(f) => f as u32
+    };
+
     let rank = ranks
         .iter()
-        .position(|&x| x == square.chars().nth(1).unwrap())
-        .unwrap() as u32;
-    let letter = letters
-        .iter()
-        .position(|&x| x == square.chars().next().unwrap())
-        .unwrap() as u32;
-    rank * 8 + letter
+        .position(|&x| x == square.chars().nth(1).unwrap());
+    let rank = match rank {
+        None => return Err(ChessError::SquareParseError(square.to_string())),
+        Some(r) => r as u32
+    };
+    
+    Ok(rank * 8 + file)
 }
 
 pub fn index_to_square(index: u32) -> String {
@@ -72,8 +79,10 @@ pub fn lsb(bitboard: u64) -> Option<u64> {
     let index = lsb_index(bitboard)?;
     Some(1u64 << index)
 }
-//
+
 pub fn msb(bitboard: u64) -> Option<u64> {
     let index = msb_index(bitboard)?;
     1u64.checked_shl(index)
 }
+
+

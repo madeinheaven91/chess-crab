@@ -6,57 +6,17 @@ use std::{
     },
 };
 
-use super::structs::Color;
-
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Piece {
-    King,
-    Queen,
-    Rook,
-    Bishop,
-    Knight,
-    Pawn,
-}
-
-impl Piece{
-    pub fn pieces() -> [Piece; 6]{
-        [Piece::King, Piece::Queen, Piece::Rook, Piece::Bishop, Piece::Knight, Piece::Pawn]
-    }
-    pub fn promotable() -> [Piece; 4]{
-        [Piece::Queen, Piece::Rook, Piece::Bishop, Piece::Knight]
-    }
-}
-
-impl Display for Piece{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let char = match self {
-            Self::King => "K",
-            Self::Queen => "Q",
-            Self::Bishop => "B",
-            Self::Knight => "N",
-            Self::Rook => "R",
-            Self::Pawn => ""
-        };
-        write!(f, "{}", char)
-    }
-}
-
 /// A wrapper type for u64 with chess util methods.
 /// Mapped in a Little-Endian Rank-File style
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Bitboard {
     num: u64,
-    kind: Option<Piece>,
-    color: Option<Color>
 }
 
 impl Bitboard {
-    pub fn new(num: u64, kind: Option<Piece>, color: Option<Color>) -> Self {
+    pub fn new(num: u64) -> Self {
         Bitboard {
             num,
-            kind,
-            color
         }
     }
 
@@ -64,18 +24,29 @@ impl Bitboard {
         self.num
     }
 
-    pub fn color(&self) -> Option<Color> {
-        self.color
-    }
-
-    pub fn kind(&self) -> Option<Piece> {
-        self.kind
-    }
+    // pub fn color(&self) -> Option<Color> {
+    //     self.color
+    // }
+    //
+    // pub fn kind(&self) -> Option<Piece> {
+    //     self.kind
+    // }
 
     pub fn get_square(&self, index: u32) -> u32 {
         ((self.num >> index) % 2) as u32
     }
 
+    pub fn set_1(&mut self, index: u32) {
+        *self |= Bitboard::from(1u64 << index)
+    }
+
+    pub fn set_0(&mut self, index: u32){
+        *self &= !Bitboard::from(1u64 << index)
+    }
+
+    pub fn get_bit(&self, index: u32) -> bool {
+        (*self & Bitboard::from(1u64 << index)) != Bitboard::from(0u64)
+    }
 }
 
 // Bitboards are mapped in a Little-Endian Rank-File style
@@ -166,8 +137,6 @@ impl From<u64> for Bitboard {
     fn from(value: u64) -> Self {
         Bitboard {
             num: value,
-            kind: None,
-            color: None
         }
     }
 }
@@ -177,8 +146,6 @@ impl From<u32> for Bitboard {
     fn from(value: u32) -> Self {
         Bitboard {
             num: 1 << value,
-            kind: None,
-            color: None
         }
     }
 }
@@ -201,8 +168,6 @@ impl From<[u32; 8]> for Bitboard {
         Bitboard {
             // num: value.iter().fold(0, |acc, x| (acc << 8) | *x as u64),
             num: value.iter().map(|x| reverse(*x)).fold(0, |acc, x| (acc << 8) | x as u64),
-            kind: None,
-            color: None
         }
     }
 }
@@ -222,8 +187,6 @@ impl BitOr for Bitboard {
     fn bitor(self, rhs: Self) -> Self::Output {
         Bitboard{
             num: self.num | rhs.num,
-            kind: self.kind,
-            color: self.color
         }
     }
 }
@@ -233,8 +196,6 @@ impl BitAnd for Bitboard {
     fn bitand(self, rhs: Self) -> Self::Output {
         Bitboard{
             num: self.num & rhs.num,
-            kind: self.kind,
-            color: self.color
         }
     }
 }
@@ -244,8 +205,6 @@ impl BitXor for Bitboard {
     fn bitxor(self, rhs: Self) -> Self::Output {
         Bitboard{ 
             num: self.num ^ rhs.num,
-            kind: self.kind,
-            color: self.color 
         }
     }
 }
@@ -274,8 +233,6 @@ impl Not for Bitboard {
     fn not(self) -> Self::Output {
         Bitboard{
             num: !self.num,
-            kind: self.kind,
-            color: self.color
         }
     }
 }
@@ -285,8 +242,6 @@ impl Shl<u32> for Bitboard {
     fn shl(self, rhs: u32) -> Self::Output {
         Bitboard{
             num: self.num << rhs,
-            kind: self.kind,
-            color: self.color
         }
     }
 }
@@ -302,8 +257,6 @@ impl Shr<u32> for Bitboard {
     fn shr(self, rhs: u32) -> Self::Output {
         Bitboard{
             num: self.num >> rhs,
-            kind: self.kind,
-            color: self.color
         }
     }
 }
