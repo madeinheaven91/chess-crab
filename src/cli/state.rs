@@ -3,7 +3,7 @@ use crossterm::{
     execute,
     terminal::{Clear, ClearType},
 };
-use crate::{cli::handlers::handle_cmd, game::structs::game::Game};
+use crate::{cli::cmd::{handle_cmd, handle_debug_cmd}, game::structs::game::Game};
 use std::
     borrow::BorrowMut
 ;
@@ -11,7 +11,8 @@ use std::
 pub struct State {
     pub game: Rc<RefCell<Game>>,
     pub message: Rc<RefCell<String>>,
-    pub show_board: bool
+    pub show_board: bool,
+    pub debug: bool
 }
 
 impl State{
@@ -19,7 +20,8 @@ impl State{
         Self{
             game: Rc::new(RefCell::new(game)),
             message: Rc::new(RefCell::new(String::new())),
-            show_board: true
+            show_board: true,
+            debug: std::env::var("DEBUG").is_ok()
         }
     }
     pub fn rewrite(&mut self, new_msg: String){
@@ -71,7 +73,12 @@ pub fn main_loop(state: &mut State) -> anyhow::Result<()> {
         std::io::stdin().read_line(&mut buf).unwrap();
         let cmd = buf.trim().split(" ").map(|s| s.trim()).collect::<Vec<_>>();
 
-        match handle_cmd(state, &cmd){
+        let res = match state.debug {
+            false => handle_cmd(state, &cmd),
+            true => handle_debug_cmd(state, &cmd)
+        };
+
+        match res{
             Ok(signal) => match signal{
                 Signal::Exit => break,
                 Signal::Continue => continue,

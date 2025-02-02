@@ -54,3 +54,40 @@ impl IndexMut<Color> for [[Bitboard; 6]; 2]{
         &mut self[index as usize]
     }
 }
+
+impl Index<Color> for [[bool; 2]; 2]{
+    type Output = [bool; 2];
+    fn index(&self, index: Color) -> &Self::Output {
+        &self[index as usize]
+    }
+}
+
+impl IndexMut<Color> for [[bool; 2]; 2]{
+    fn index_mut(&mut self, index: Color) -> &mut [bool; 2] {
+        &mut self[index as usize]
+    }
+}
+
+pub enum Castling {
+    KingSide,
+    QueenSide
+}
+
+impl Index<Castling> for [bool; 2] {
+    type Output = bool;
+    fn index(&self, index: Castling) -> &Self::Output {
+        match index {
+            Castling::KingSide => &self[0],
+            Castling::QueenSide => &self[1]
+        }
+    }
+}
+
+impl IndexMut<Castling> for [bool; 2] {
+    fn index_mut(&mut self, index: Castling) -> &mut bool {
+        match index {
+            Castling::KingSide => &mut self[0],
+            Castling::QueenSide => &mut self[1]
+        }
+    }
+}

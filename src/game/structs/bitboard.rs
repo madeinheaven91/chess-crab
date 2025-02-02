@@ -20,6 +20,12 @@ impl Bitboard {
         }
     }
 
+    pub fn empty() -> Self{
+        Bitboard {
+            num: 0
+        }
+    }
+
     pub fn num(&self) -> u64 {
         self.num
     }

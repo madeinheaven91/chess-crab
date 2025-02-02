@@ -571,7 +571,7 @@ fn binded_pieces() {
     game.pieces[Black][Queen] |= Bitboard::from(1u64 << 49);
     game.pieces[White][King] |= Bitboard::from(1u64 << 1);
     game.pieces[White][Rook] |= Bitboard::from(1u64 << 9);
-    game.make_move(&Move::new(&game, 9, 10, Piece::Rook, Color::White));
+    let _ = game.make_move(&Move::new(&game, 9, 10, Piece::Rook, Color::White));
 }
 
 #[test]
@@ -581,8 +581,10 @@ fn promotion(){
 
     let mut game = Game::empty();
 
+    game.pieces[White][King] |= Bitboard::from(1u64 << 1);
+    game.pieces[Black][King] |= Bitboard::from(1u64 << 10);
     game.pieces[White][Pawn] |= Bitboard::from(1u64 << 56);
-    game.make_move(&Move::promotion(&game, 56, 63, Pawn, White, Queen));
+    let _ = game.make_move(&Move::promotion(&game, 56, 63, Pawn, White, Queen));
 
     assert_eq!(game.pieces[White][Queen].num(), (1u64 << 63));
     assert_eq!(game.pieces[White][Pawn].num(), 0);
@@ -596,7 +598,9 @@ fn capture_promotion(){
     let mut game = Game::empty();
     game.pieces[White][Pawn] |= Bitboard::from(1u64 << 56);
     game.pieces[Black][Knight] |= Bitboard::from(1u64 << 62);
-    game.make_move(&Move::promotion(&game, 56, 62, Pawn, White, Queen));
+    game.pieces[White][King] |= Bitboard::from(1u64 << 1);
+    game.pieces[Black][King] |= Bitboard::from(1u64 << 10);
+    let _ = game.make_move(&Move::promotion(&game, 56, 62, Pawn, White, Queen));
 
     assert_eq!(game.pieces[White][Queen].num(), (1u64 << 62));
     assert_eq!(game.pieces[White][Pawn].num(), 0);

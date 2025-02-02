@@ -1,6 +1,9 @@
-use crate::shared::{consts::{DIRECTION, FILE_A, FILE_B, FILE_G, FILE_H, RANK_2, RANK_7, RAY}, functions::{lsb_index, msb_index}};
+use crate::{game::structs::color::Castling, shared::{consts::{DIRECTION, FILE_A, FILE_B, FILE_G, FILE_H, RANK_2, RANK_7, RAY}, functions::{lsb_index, msb_index}}};
 
 use super::structs::{bitboard::Bitboard, color::Color, game::Game, piece::Piece};
+
+use Color::*;
+use Castling::*;
 
 pub fn pawn_advances(pawn: u32, game: &Game, color: Color) -> Bitboard{
     let pawn = 1u64 << pawn;
@@ -69,6 +72,50 @@ pub fn king_moves(king: u32, game: &Game, color: Color) -> Bitboard {
     let moves = moves & !blockers;
 
     Bitboard::from(moves)
+}
+
+pub fn short_castling(king: u32, game: &Game, color: Color) -> Bitboard {
+    let king_num = 1u64 << king;
+
+    let right = match color {
+        Color::White => game.castling_rights[White][KingSide],
+        Color::Black => game.castling_rights[Black][KingSide],
+    };
+    if !right {
+        return Bitboard::empty();
+    }
+    let blockers = game.all_pieces();
+    let squares_are_empty = ((king_num << 1 | king_num << 2) & blockers.num()) == 0;
+    let squares_are_attacked = game.square_is_attacked(king + 1, color) || game.square_is_attacked(king + 2, color);
+
+    if !game.is_check(color) && squares_are_empty && !squares_are_attacked {
+        Bitboard::from(king_num << 2)
+    }else{
+        Bitboard::empty()
+    }
+    
+}
+
+pub fn long_castling(king: u32, game: &Game, color: Color) -> Bitboard {
+    let king_num = 1u64 << king;
+
+    let right = match color {
+        Color::White => game.castling_rights[White][QueenSide],
+        Color::Black => game.castling_rights[Black][QueenSide],
+    };
+    if !right {
+        return Bitboard::empty();
+    }
+    let blockers = game.all_pieces();
+    let squares_are_empty = ((king_num >> 1 | king_num >> 2 | king_num >> 3) & blockers.num()) == 0;
+    let squares_are_attacked = game.square_is_attacked(king - 1, color) || game.square_is_attacked(king - 2, color) || game.square_is_attacked(king - 3, color);
+
+    if !game.is_check(color) && squares_are_empty && !squares_are_attacked {
+        Bitboard::from(king_num >> 2)
+    }else{
+        Bitboard::empty()
+    }
+    
 }
 
 pub fn knight_moves(knight: u32, game: &Game, color: Color) -> Bitboard {

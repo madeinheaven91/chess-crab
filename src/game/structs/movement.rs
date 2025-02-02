@@ -40,7 +40,18 @@ impl Move {
                     Flag::Capture(piece)
                 }
             },
-            // Piece::King => todo!(),
+            Piece::King => {
+                if to == from + 2 {
+                    Flag::ShortCastle
+                }else if to + 2 == from {
+                    Flag::LongCastle
+                }else if game.find_piece(!color, to).is_none() {
+                        Flag::Default
+                    }else{
+                        let piece = game.find_piece(!color, to).unwrap();
+                        Flag::Capture(piece)
+                }
+            },
             _ => {
                 if game.find_piece(!color, to).is_none() {
                     Flag::Default
@@ -71,6 +82,34 @@ impl Move {
             piece,
             color,
             flag
+        }
+    }
+    pub fn short_castling(king: u32, color: Color) -> Self {
+        Self {
+            from: king,
+            to: king + 2,
+            piece: Piece::King,
+            color,
+            flag: Flag::ShortCastle
+        }
+    }
+    pub fn long_castling(king: u32, color: Color) -> Self {
+        Self {
+            from: king,
+            to: king - 2,
+            piece: Piece::King,
+            color,
+            flag: Flag::LongCastle
+        }
+    }
+    pub fn algebraic(&self) -> String {
+        match self.flag {
+            Flag::Promotion(p) | Flag::CapturePromotion(_, p) => {
+                format!("{}{}{}", index_to_square(self.from), index_to_square(self.to), p)
+            }
+            _ => {
+                format!("{}{}", index_to_square(self.from), index_to_square(self.to))
+            }
         }
     }
 }

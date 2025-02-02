@@ -4,7 +4,8 @@ use std::{error::Error, fmt::Display};
 pub enum ChessError{
     SquareParseError(String),
     InvalidMove(String),
-    FENParseError(String, String)
+    FENParseError(String, String),
+    GameFinished
 }
 
 impl Display for ChessError{
@@ -12,7 +13,8 @@ impl Display for ChessError{
         match self{
             ChessError::InvalidMove(m) => write!(f, "{}", m),
             ChessError::SquareParseError(sq) => write!(f, "Couldn't parse square: {:?}", sq),
-            ChessError::FENParseError(fen, details) => write!(f, "Couldn't parse FEN string.\nInput: {}\nDetails: {}", fen, details)
+            ChessError::FENParseError(fen, details) => write!(f, "Couldn't parse FEN string.\nInput: {}\nDetails: {}", fen, details),
+            ChessError::GameFinished => write!(f, "Couldn't make a move, game is finished.")
         }
     }
 }

@@ -25,6 +25,7 @@ fn main() -> anyhow::Result<()> {
     main_loop(&mut state)?;
 
     execute!(stdout(), LeaveAlternateScreen)?;
+
     Ok(())
 }
 
