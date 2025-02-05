@@ -6,101 +6,93 @@ use std::{
     },
 };
 
+use crate::shared::functions::lsb_index;
+
 /// A wrapper type for u64 with chess util methods.
 /// Mapped in a Little-Endian Rank-File style
+///
+///  +----+----+----+----+----+----+----+----+
+///  | 56 | 57 | 58 | 59 | 60 | 61 | 62 | 63 | 8
+///  +----+----+----+----+----+----+----+----+
+///  | 48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 7
+///  +----+----+----+----+----+----+----+----+
+///  | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 6
+///  +----+----+----+----+----+----+----+----+
+///  | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 5
+///  +----+----+----+----+----+----+----+----+
+///  | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 4
+///  +----+----+----+----+----+----+----+----+
+///  | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 3
+///  +----+----+----+----+----+----+----+----+
+///  |  8 |  9 | 10 | 11 | 12 | 13 | 14 | 15 | 2
+///  +----+----+----+----+----+----+----+----+
+///  |  0 |  1 |  2 |  3 |  4 |  5 |  6 |  7 | 1
+///  +----+----+----+----+----+----+----+----+
+///     a    b    c    d    e    f    g    h
+///
+/// In this mapping, single step increments are as follows:
+/// left shift is positive (<<)
+/// right shift is negative (>>)
+///
+/// northwest    north   northeast
+/// noWe         nort         noEa
+///         +7    +8    +9
+///             \  |  /
+/// west    -1 <-  0 -> +1    east
+///             /  |  \
+///         -9    -8    -7
+/// soWe         sout         soEa
+/// southwest    south   southeast
+///
+/// squareIndexBigEndianFile    = squareIndexLittleEndianFile ^ 7
+/// squareIndexLittleEndianFile = squareIndexBigEndianFile    ^ 7
+/// squareIndexBigEndianRank    = squareIndexLittleEndianRank ^ 56
+/// squareIndexLittleEndianRank = squareIndexBigEndianRank    ^ 56
+///
+/// squareIndex {0..63} = 8 * rankIndex + fileIndex
+/// rankIndex   {0..7}  = squareIndex div 8 (squareIndex >> 3)
+/// fileIndex   {0..7}  = squareIndex mod 8 (squareIndex & 7)
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Bitboard {
     num: u64,
 }
 
 impl Bitboard {
+    /// Creates a new bitboard from u64
     pub fn new(num: u64) -> Self {
         Bitboard {
             num,
         }
     }
 
+    /// Creates a bitboard all bits of which are 0
     pub fn empty() -> Self{
         Bitboard {
             num: 0
         }
     }
 
+    /// Returns a u64 of a bitboard
     pub fn num(&self) -> u64 {
         self.num
     }
 
-    // pub fn color(&self) -> Option<Color> {
-    //     self.color
-    // }
-    //
-    // pub fn kind(&self) -> Option<Piece> {
-    //     self.kind
-    // }
-
-    pub fn get_square(&self, index: u32) -> u32 {
-        ((self.num >> index) % 2) as u32
-    }
-
+    /// Sets the indexed bit to 1
     pub fn set_1(&mut self, index: u32) {
         *self |= Bitboard::from(1u64 << index)
     }
 
+    /// Sets the indexed bit to 0
     pub fn set_0(&mut self, index: u32){
         *self &= !Bitboard::from(1u64 << index)
     }
 
-    pub fn get_bit(&self, index: u32) -> bool {
-        (*self & Bitboard::from(1u64 << index)) != Bitboard::from(0u64)
+    /// Makes all the bits of a bitboard 0
+    pub fn clear(&mut self) {
+        *self &= Bitboard::empty()
     }
 }
 
-// Bitboards are mapped in a Little-Endian Rank-File style
-//
-//  +----+----+----+----+----+----+----+----+
-//  | 56 | 57 | 58 | 59 | 60 | 61 | 62 | 63 | 8
-//  +----+----+----+----+----+----+----+----+
-//  | 48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 7
-//  +----+----+----+----+----+----+----+----+
-//  | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 6
-//  +----+----+----+----+----+----+----+----+
-//  | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 5
-//  +----+----+----+----+----+----+----+----+
-//  | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 4
-//  +----+----+----+----+----+----+----+----+
-//  | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 3
-//  +----+----+----+----+----+----+----+----+
-//  |  8 |  9 | 10 | 11 | 12 | 13 | 14 | 15 | 2
-//  +----+----+----+----+----+----+----+----+
-//  |  0 |  1 |  2 |  3 |  4 |  5 |  6 |  7 | 1
-//  +----+----+----+----+----+----+----+----+
-//     a    b    c    d    e    f    g    h
-//
-// Get bit index by square label: file + (rank - 1) * 8
-//
-//
-// In this mapping, single step increments are as follows:
-// left shift is positive (<<)
-// right shift is negative (>>)
-//
-// northwest    north   northeast
-// noWe         nort         noEa
-//         +7    +8    +9
-//             \  |  /
-// west    -1 <-  0 -> +1    east
-//             /  |  \
-//         -9    -8    -7
-// soWe         sout         soEa
-// southwest    south   southeast
-//
-// squareIndexBigEndianFile    = squareIndexLittleEndianFile ^ 7;
-// squareIndexLittleEndianFile = squareIndexBigEndianFile    ^ 7;
-// squareIndexBigEndianRank    = squareIndexLittleEndianRank ^ 56;
-// squareIndexLittleEndianRank = squareIndexBigEndianRank    ^ 56;
-//
-// squareIndex {0..63} = 8*rankIndex + fileIndex;
-// rankIndex   {0..7}  = squareIndex div 8; // squareIndex >> 3;
-// fileIndex   {0..7}  = squareIndex mod 8; // squareIndex & 7;
 
 impl Binary for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -287,14 +279,22 @@ impl From<Bitboard> for BitboardIterator {
 impl Iterator for BitboardIterator {
     type Item = u32;
     fn next(&mut self) -> Option<Self::Item> {
-        for i in 0..=63 {
-            let bit = (self.num >> i) % 2;
-            if bit == 1 {
-                self.num &= !(1 << i);
-                return Some(i);
+        // for i in 0..=63 {
+        //     let bit = (self.num >> i) % 2;
+        //     if bit == 1 {
+        //         self.num &= !(1 << i);
+        //         return Some(i);
+        //     }
+        // }
+        // None
+        let bit = lsb_index(Bitboard::from(self.num));
+        match bit {
+            None => None,
+            Some(index) => {
+                self.num &= !(1 << index);
+                Some(index)
             }
         }
-        None
     }
 }
 
@@ -303,5 +303,11 @@ impl IntoIterator for Bitboard {
     type IntoIter = BitboardIterator;
     fn into_iter(self) -> Self::IntoIter {
         BitboardIterator::from(self)
+    }
+}
+
+impl PartialEq<u64> for Bitboard {
+    fn eq(&self, other: &u64) -> bool {
+        self.num == *other
     }
 }

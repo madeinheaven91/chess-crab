@@ -1,4 +1,4 @@
-use crate::game::structs::game::Game;
+use crate::game::structs::board::Board;
 
 use std::{cell::Ref, ops::Deref} ;
 
@@ -13,7 +13,7 @@ pub fn handle_move(state: &mut State, cmd: Vec<&str>) -> Result<Signal, ()> {
         Ok(mv) => mv,
     };
 
-    if game.gen_moves().contains(&mv) {
+    if game.gen_legal_moves().contains(&mv) {
         drop(game);
         let mut game_mut = state.game.deref().borrow_mut();
         let move_res = game_mut.make_move(&mv);
@@ -26,9 +26,27 @@ pub fn handle_move(state: &mut State, cmd: Vec<&str>) -> Result<Signal, ()> {
     }
 }
 
+pub fn handle_unchecked_move(state: &mut State, cmd: Vec<&str>) -> Result<Signal, ()> {
+    let game = state.game.borrow();
+    let mv = match game.parse_move(cmd[1]) {
+        Err(_) => {
+            return Ok(Signal::Message(String::from("Incorrect move!")))
+        }
+        Ok(mv) => mv,
+    };
+
+    drop(game);
+    let mut game_mut = state.game.deref().borrow_mut();
+    let move_res = game_mut.make_move(&mv);
+    match move_res {
+        Ok(_) =>  Ok(Signal::Message(String::new())),
+        Err(err) =>  Ok(Signal::Message(err.to_string()))
+    }
+}
+
 pub fn handle_random(state: &mut State) -> Result<Signal, ()> {
     let mut game_mut = state.game.deref().borrow_mut();
-    let moves = game_mut.gen_moves();
+    let moves = game_mut.gen_legal_moves();
     if moves.is_empty() {
         Ok(Signal::Message("No moves available".to_string()))
     }else{
@@ -42,15 +60,14 @@ pub fn handle_random(state: &mut State) -> Result<Signal, ()> {
     }
 }
 
-pub fn handle_moves(game: Ref<Game>, cmd: Vec<&str>) -> Result<Signal, Signal> {
+pub fn handle_moves(game: Ref<Board>, cmd: Vec<&str>) -> Result<Signal, Signal> {
     let algebraic = matches!(cmd[1], "a");
-    let msg = game.gen_moves()
+    let msg = game.gen_legal_moves()
         .iter()
         .fold(String::from("Available moves: "), |acc, m| {
             acc + format!("{} ", if algebraic { m.algebraic() } else { m.to_string() }).as_str()
         });
     Ok(Signal::Message(msg))
-    
 }
 
 pub fn handle_position(cmd: Vec<&str>) -> Result<Signal, Signal> {
@@ -63,9 +80,9 @@ pub fn handle_position(cmd: Vec<&str>) -> Result<Signal, Signal> {
         .to_string();
 
     let pos = match fen.as_str() {
-        "startpos" => Game::default(),
-        "empty" => Game::empty(),
-        _ => match Game::from_fen(&fen) {
+        "startpos" => Board::default(),
+        "empty" => Board::empty(),
+        _ => match Board::from_fen(&fen) {
             Ok(game) => {
                 game
             },
@@ -73,5 +90,5 @@ pub fn handle_position(cmd: Vec<&str>) -> Result<Signal, Signal> {
         }
     };
 
-    Ok(Signal::Game(Box::from(pos)))
+    Ok(Signal::Board(Box::from(pos)))
 }

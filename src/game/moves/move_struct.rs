@@ -1,8 +1,6 @@
 use std::fmt::Display;
 
-use crate::shared::functions::index_to_square;
-
-use super::{color::Color, game::Game, piece::Piece};
+use crate::{game::structs::{board::Board, color::Color, piece::Piece}, shared::functions::index_to_square};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Move {
@@ -21,46 +19,88 @@ pub enum Flag {
     CapturePromotion(Piece, Piece),
     LongPawnMove,
     EnPassant,
-    ShortCastle,
-    LongCastle,
+    ShortCastling,
+    LongCastling,
+    Null
+}
+
+impl Flag {
+    pub fn is_capture(&self) -> bool {
+        matches!(self, Flag::Capture(_) | Flag::CapturePromotion(_, _) | Flag::EnPassant)
+    }
+
+    pub fn is_castling(&self) -> bool {
+        matches!(self, Flag::ShortCastling | Flag::LongCastling)
+    }
 }
 
 impl Move {
-    pub fn new(game: &Game, from: u32, to: u32, piece: Piece, color: Color) -> Self {
+    pub fn new(game: &Board, from: u32, to: u32, piece: Piece, color: Color) -> Self {
         let flag = match piece{
             Piece::Pawn => {
                 if (to as i8 - from as i8).abs() == 16 {
                     Flag::LongPawnMove                    
                 }else if to == game.en_passant.unwrap_or(0) {
                     Flag::EnPassant
-                }else if game.find_piece(!color, to).is_none() {
+                }else if game.find_piece(to).is_none() {
                     Flag::Default
                 }else{
-                    let piece = game.find_piece(!color, to).unwrap();
+                    let (_, piece) = game.find_piece(to).unwrap();
                     Flag::Capture(piece)
                 }
             },
             Piece::King => {
                 if to == from + 2 {
-                    Flag::ShortCastle
+                    Flag::ShortCastling
                 }else if to + 2 == from {
-                    Flag::LongCastle
-                }else if game.find_piece(!color, to).is_none() {
-                        Flag::Default
-                    }else{
-                        let piece = game.find_piece(!color, to).unwrap();
-                        Flag::Capture(piece)
+                    Flag::LongCastling
+                }else if game.find_piece(to).is_none() {
+                    Flag::Default
+                }else{
+                    let (_, piece) = game.find_piece(to).unwrap();
+                    Flag::Capture(piece)
                 }
             },
             _ => {
-                if game.find_piece(!color, to).is_none() {
+                if game.find_piece(to).is_none() {
                     Flag::Default
                 }else{
-                    let piece = game.find_piece(!color, to).unwrap();
+                    let (_, piece) = game.find_piece(to).unwrap();
                     Flag::Capture(piece)
                 }
             }
         };
+        // let flag = if let Some((_, captured)) = game.find_piece(to) {
+        //     Flag::Capture(captured)
+        // }else {
+        //     match piece {
+        //         Piece::Pawn => {
+        //             if (to as i8 - from as i8).abs() == 16 {
+        //                 Flag::LongPawnMove                    
+        //             }else if to == game.en_passant.unwrap_or(0) {
+        //                 Flag::EnPassant
+        //             }else if game.find_piece(to).is_none() {
+        //                 Flag::Default
+        //             }else{
+        //                 let (_, piece) = game.find_piece(to).unwrap();
+        //                 Flag::Capture(piece)
+        //             }
+        //         },
+        //         Piece::King => {
+        //             if to == from + 2 {
+        //                 Flag::ShortCastling
+        //             }else if to + 2 == from {
+        //                 Flag::LongCastling
+        //             }else if game.find_piece(to).is_none() {
+        //                 Flag::Default
+        //             }else{
+        //                 let (_, piece) = game.find_piece(to).unwrap();
+        //                 Flag::Capture(piece)
+        //             }
+        //         },
+        //         _ => Flag::Default
+        //     }
+        // };
         Self {
             from,
             to,
@@ -69,43 +109,57 @@ impl Move {
             flag
         }
     }
-    pub fn promotion(game: &Game, from: u32, to: u32, piece: Piece, color: Color, promotion: Piece) -> Self {
-        let flag = if game.find_piece(!color, to).is_none() {
+
+    pub fn promotion(game: &Board, from: u32, to: u32, color: Color, promotion: Piece) -> Self {
+        let flag = if game.find_piece(to).is_none() {
             Flag::Promotion(promotion)
         }else{
-            let captured = game.find_piece(!color, to).unwrap();
+            let (_, captured) = game.find_piece(to).unwrap();
             Flag::CapturePromotion(captured, promotion)
         };
         Self {
             from,
             to,
-            piece,
+            piece: Piece::Pawn,
             color,
             flag
         }
     }
+
     pub fn short_castling(king: u32, color: Color) -> Self {
         Self {
             from: king,
             to: king + 2,
             piece: Piece::King,
             color,
-            flag: Flag::ShortCastle
+            flag: Flag::ShortCastling
         }
     }
+
     pub fn long_castling(king: u32, color: Color) -> Self {
         Self {
             from: king,
             to: king - 2,
             piece: Piece::King,
             color,
-            flag: Flag::LongCastle
+            flag: Flag::LongCastling
         }
     }
+    
+    pub fn null() -> Self{
+        Self {
+            from: 0,
+            to: 0,
+            piece: Piece::Pawn,
+            color: Color::White,
+            flag: Flag::Null
+        }
+    }
+
     pub fn algebraic(&self) -> String {
         match self.flag {
             Flag::Promotion(p) | Flag::CapturePromotion(_, p) => {
-                format!("{}{}{}", index_to_square(self.from), index_to_square(self.to), p)
+                format!("{}{}{}", index_to_square(self.from), index_to_square(self.to), p.to_string().to_lowercase())
             }
             _ => {
                 format!("{}{}", index_to_square(self.from), index_to_square(self.to))
@@ -115,8 +169,11 @@ impl Move {
 }
 
 impl Display for Move {
+    // FIXME: Sometimes when 2 pieces can attack the same square, a starting square letter should
+    // be provided. Right now it is not implemented
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.flag {
+            Flag::Null => write!(f, "Null"),
             Flag::Default | Flag::LongPawnMove => match self.piece {
                 Piece::Pawn => {
                     write!(f, "{}", index_to_square(self.to))
@@ -150,10 +207,10 @@ impl Display for Move {
                     prom
                 )
             }
-            Flag::ShortCastle => {
+            Flag::ShortCastling => {
                 write!(f, "0-0")
             }
-            Flag::LongCastle => {
+            Flag::LongCastling => {
                 write!(f, "0-0-0")
             }
         }

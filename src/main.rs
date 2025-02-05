@@ -2,22 +2,25 @@ use std::
     io::stdout
 ;
 
-use cli::state::{main_loop, State};
+use io::state::{main_loop, State};
 use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen},
 };
-use game::structs::game::Game;
+use game::structs::board::Board;
+use shared::statics::init_statics;
 
 pub mod game;
 pub mod shared;
-pub mod cli;
+pub mod io;
 #[cfg(test)]
 pub mod test;
 
 
 fn main() -> anyhow::Result<()> {
-    let game = Game::default();
+    init_statics();
+
+    let game = Board::default();
     let mut state = State::new(game);
 
     execute!(stdout(), EnterAlternateScreen)?;

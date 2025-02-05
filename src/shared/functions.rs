@@ -1,5 +1,5 @@
 use super::consts::{FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8};
-use crate::shared::errors::ChessError;
+use crate::{game::structs::bitboard::Bitboard, shared::errors::ChessError};
 
 pub fn square_to_index(square: &str) -> Result<u32, ChessError>{
     let files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -61,28 +61,28 @@ pub fn row(square: u64) -> u64 {
     }
 }
 
-pub fn lsb_index(bitboard: u64) -> Option<u32> {
-    match bitboard {
+pub fn lsb_index(bitboard: Bitboard) -> Option<u32> {
+    match bitboard.num() {
         0 => None,
-        _ => Some(bitboard.trailing_zeros()),
+        _ => Some(bitboard.num().trailing_zeros()),
     }
 }
 
-pub fn msb_index(bitboard: u64) -> Option<u32> {
-    match bitboard {
+pub fn msb_index(bitboard: Bitboard) -> Option<u32> {
+    match bitboard.num() {
         0 => None,
-        _ => Some(63 - bitboard.leading_zeros()),
+        _ => Some(63 - bitboard.num().leading_zeros()),
     }
 }
 
-pub fn lsb(bitboard: u64) -> Option<u64> {
+pub fn lsb(bitboard: Bitboard) -> Option<Bitboard> {
     let index = lsb_index(bitboard)?;
-    Some(1u64 << index)
+    Some(Bitboard::from(index))
 }
 
-pub fn msb(bitboard: u64) -> Option<u64> {
+pub fn msb(bitboard: Bitboard) -> Option<Bitboard> {
     let index = msb_index(bitboard)?;
-    1u64.checked_shl(index)
+    Some(Bitboard::from(index))
+    
+    // 1u64.checked_shl(index))
 }
-
-

@@ -42,6 +42,15 @@ impl From<Color> for usize{
     }
 }
 
+impl From<usize> for Color {
+    fn from(value: usize) -> Self {
+        match value {
+            0 => Color::White,
+            _ => Color::Black,
+        }
+    }
+}
+
 impl Index<Color> for [[Bitboard; 6]; 2]{
     type Output = [Bitboard; 6];
     fn index(&self, index: Color) -> &Self::Output {
