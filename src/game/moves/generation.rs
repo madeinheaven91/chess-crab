@@ -1,7 +1,7 @@
 use crate::game::structs::bitboard::Bitboard;
-use crate::game::structs::game_state::GameState;
 use crate::game::structs::{board::Board, piece::Piece, color::{Color, Castling}};
 use crate::shared::errors::ChessError;
+use crate::shared::statics::masks::KING_MASKS;
 
 use super::move_struct::Flag;
 use super::{individual::*, move_struct::Move};
@@ -22,11 +22,11 @@ impl Board{
                 let mv = Move::new(self, from, to, King, self.turn);
                 res.push(mv);
             }
-            if short_castling(from, self, self.turn) != Bitboard::empty() {
+            if short_castling(self, self.turn) {
                 let mv = Move::short_castling(from, self.turn);
                 res.push(mv)
             }
-            if long_castling(from, self, self.turn) != Bitboard::empty() {
+            if long_castling(self, self.turn) {
                 let mv = Move::long_castling(from, self.turn);
                 res.push(mv)
             }
@@ -77,12 +77,19 @@ impl Board{
     }
 
     /// Simulates a halfmove and returns whether it is legal or not
+    /// FIXME: 
     fn is_legal(&self, mv: &Move) -> bool {
+        if mv.piece == King && KING_MASKS[mv.to as usize] & self.pieces[!mv.color][King] != Bitboard::empty() {
+            return false
+        }
         let mut cloned = self.clone();
         let res = cloned.make_move(mv);
         match res {
             Err(_) => false,
-            Ok(_) => cloned.is_check() != Some(mv.color)
+            Ok(_) => { 
+                // cloned.is_check() != Some(mv.color)
+                !cloned.square_is_attacked(cloned.pieces[mv.color][King].lsb_index().unwrap(), !mv.color)
+            }
         }
     }
 
@@ -94,6 +101,7 @@ impl Board{
         if mv.piece == Pawn || mv.flag.is_capture() {
             self.halfmove_clock = 0;
         }
+        self.en_passant = None;
 
         let moved_bitboard = &mut self.pieces[mv.color][mv.piece];
         match mv.flag{
@@ -101,18 +109,15 @@ impl Board{
             Flag::Default => {
                 moved_bitboard.set_0(mv.from);
                 moved_bitboard.set_1(mv.to);
-                self.en_passant = None;
             },
             Flag::LongPawnMove => {
                 moved_bitboard.set_0(mv.from);
                 moved_bitboard.set_1(mv.to);
-                self.en_passant = if check_en_passant(mv.to, self, mv.color) {
-                    match mv.color {
+                if check_en_passant(mv.to, self, mv.color) {
+                    self.en_passant = match mv.color {
                         White => Some(mv.to - 8),
                         Black => Some(mv.to + 8)
                     }
-                }else {
-                    None
                 };
             }
             Flag::Capture(captured) => {
@@ -120,7 +125,6 @@ impl Board{
                 moved_bitboard.set_1(mv.to);
                 let captured_bitboard = &mut self.pieces[!mv.color][captured];
                 captured_bitboard.set_0(mv.to);
-                self.en_passant = None;
                 self.halfmove_clock = 0;
                 self.repetition_history.clear();
             }
@@ -132,13 +136,11 @@ impl Board{
                     White => enemy_pawns.set_0(mv.to - 8),
                     Black => enemy_pawns.set_0(mv.to + 8),
                 }
-                self.en_passant = None;
             }
             Flag::Promotion(prom) => {
                 moved_bitboard.set_0(mv.from);
                 let promotion_bitboard = &mut self.pieces[mv.color][prom];
                 promotion_bitboard.set_1(mv.to);
-                self.en_passant = None;
             }
             Flag::CapturePromotion(captured, prom) => {
                 moved_bitboard.set_0(mv.from);
@@ -146,7 +148,6 @@ impl Board{
                 captured_bitboard.set_0(mv.to);
                 let promotion_bitboard = &mut self.pieces[mv.color][prom];
                 promotion_bitboard.set_1(mv.to);
-                self.en_passant = None;
             }
             Flag::ShortCastling => {
                 match mv.color {
@@ -211,36 +212,51 @@ impl Board{
 
         self.update_pieces();
         self.turn = !self.turn;
-        // self.move_history.push(*mv);
         self.repetition_history.push(self.get_hash());
         
         Ok(())
     }
 
     /// Returns whether the provided square is attacked by the provided side
-    pub fn square_is_attacked(&self, square: u32, color: Color) -> bool {
-        let bitboard = 1u64 << square;
-        let attackers = self.pieces[color];
+    pub fn square_is_attacked(&self, square: u8, color: Color) -> bool {
+        let bitboard = Bitboard::from(square);
+        // let attackers = self.pieces[color];
 
-        if bitboard & all_pawn_captures(attackers[5].num(), color).num() != 0 {
+        if bitboard & all_pawn_captures(self.pieces[color][Pawn], color) != 0 {
             return true;
         }
-        if knight_moves(square, self, !color).num() & attackers[4].num() != 0 {
-            return true;            
-        }
-        if bishop_moves(square, self, !color).num() & attackers[3].num() != 0 {
-            return true;            
-        }
-        if rook_moves(square, self, !color).num() & attackers[2].num() != 0 {
-            return true;            
-        }
-        if queen_moves(square, self, !color).num() & attackers[1].num() != 0 {
-            return true;            
-        }
-        if king_moves(square, self, !color).num() & attackers[0].num() != 0 {
-            return true;            
+        if knight_moves(square, self, !color) & self.pieces[color][Knight] != 0
+            || bishop_moves(square, self, !color) & self.pieces[color][Bishop] != 0 
+            || rook_moves(square, self, !color) & self.pieces[color][Rook] != 0 
+            || queen_moves(square, self, !color) & self.pieces[color][Queen] != 0
+            || king_moves(square, self, !color) & self.pieces[color][King] != 0 {
+            return true
         }
 
         false
+    }
+
+    /// Returns the color of the checked side in a current position.
+    /// Returns `None` if no side is in check.
+    pub fn is_check(&self) -> Option<Color> {
+        let white_king_square = self.pieces[White][King].lsb_index();
+        let black_king_square = self.pieces[Black][King].lsb_index();
+        match white_king_square {
+            None => return Some(White),
+            Some(val) => {
+                if self.square_is_attacked(val, Black) {
+                    return Some(White)
+                }            
+            }
+        };
+        match black_king_square {
+            None => return Some(Black),
+            Some(val) => {
+                if self.square_is_attacked(val, White) {
+                    return Some(Black)
+                }            
+            }
+        }
+        None
     }
 }

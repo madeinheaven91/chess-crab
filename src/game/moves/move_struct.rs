@@ -4,8 +4,8 @@ use crate::{game::structs::{board::Board, color::Color, piece::Piece}, shared::f
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Move {
-    pub from: u32,
-    pub to: u32,
+    pub from: u8,
+    pub to: u8,
     pub piece: Piece,
     pub color: Color,
     pub flag: Flag,
@@ -35,7 +35,7 @@ impl Flag {
 }
 
 impl Move {
-    pub fn new(game: &Board, from: u32, to: u32, piece: Piece, color: Color) -> Self {
+    pub fn new(game: &Board, from: u8, to: u8, piece: Piece, color: Color) -> Self {
         let flag = match piece{
             Piece::Pawn => {
                 if (to as i8 - from as i8).abs() == 16 {
@@ -110,7 +110,7 @@ impl Move {
         }
     }
 
-    pub fn promotion(game: &Board, from: u32, to: u32, color: Color, promotion: Piece) -> Self {
+    pub fn promotion(game: &Board, from: u8, to: u8, color: Color, promotion: Piece) -> Self {
         let flag = if game.find_piece(to).is_none() {
             Flag::Promotion(promotion)
         }else{
@@ -126,7 +126,7 @@ impl Move {
         }
     }
 
-    pub fn short_castling(king: u32, color: Color) -> Self {
+    pub fn short_castling(king: u8, color: Color) -> Self {
         Self {
             from: king,
             to: king + 2,
@@ -136,7 +136,7 @@ impl Move {
         }
     }
 
-    pub fn long_castling(king: u32, color: Color) -> Self {
+    pub fn long_castling(king: u8, color: Color) -> Self {
         Self {
             from: king,
             to: king - 2,

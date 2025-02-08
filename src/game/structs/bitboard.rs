@@ -1,12 +1,9 @@
 use std::{
     fmt::{Binary, Display},
     ops::{
-        BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
-        ShrAssign,
+        Add, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr, ShrAssign, Sub
     },
 };
-
-use crate::shared::functions::lsb_index;
 
 /// A wrapper type for u64 with chess util methods.
 /// Mapped in a Little-Endian Rank-File style
@@ -78,18 +75,47 @@ impl Bitboard {
     }
 
     /// Sets the indexed bit to 1
-    pub fn set_1(&mut self, index: u32) {
+    pub fn set_1(&mut self, index: u8) {
         *self |= Bitboard::from(1u64 << index)
     }
 
     /// Sets the indexed bit to 0
-    pub fn set_0(&mut self, index: u32){
+    pub fn set_0(&mut self, index: u8){
         *self &= !Bitboard::from(1u64 << index)
     }
 
     /// Makes all the bits of a bitboard 0
     pub fn clear(&mut self) {
         *self &= Bitboard::empty()
+    }
+
+    pub fn lsb_index(&self) -> Option<u8> {
+        match self.num {
+            0 => None,
+            _ => Some(self.num.trailing_zeros() as u8),
+        }
+    }
+
+    pub fn msb_index(&self) -> Option<u8> {
+        match self.num {
+            0 => None,
+            _ => Some(63 - self.num.leading_zeros() as u8),
+        }
+    }
+
+    pub fn lsb(&self) -> Option<Bitboard> {
+        let index = self.lsb_index()?;
+        Some(Bitboard::from(index))
+    }
+
+    pub fn msb(&self) -> Option<Bitboard> {
+        let index = self.msb_index()?;
+        Some(Bitboard::from(index))
+        // 1u64.checked_shl(index))
+    }
+
+    pub fn is_set(&self, index: u8) -> bool {
+        *self & Bitboard::from(index) != 0
     }
 }
 
@@ -140,8 +166,8 @@ impl From<u64> for Bitboard {
 }
 
 /// Creates a bitboard from a bit index
-impl From<u32> for Bitboard {
-    fn from(value: u32) -> Self {
+impl From<u8> for Bitboard {
+    fn from(value: u8) -> Self {
         Bitboard {
             num: 1 << value,
         }
@@ -161,15 +187,15 @@ impl From<u32> for Bitboard {
 ///     0b00100011,
 ///     0b00000000,
 /// ])`
-impl From<[u32; 8]> for Bitboard {
-    fn from(value: [u32; 8]) -> Self {
+impl From<[u8; 8]> for Bitboard {
+    fn from(value: [u8; 8]) -> Self {
         Bitboard {
             // num: value.iter().fold(0, |acc, x| (acc << 8) | *x as u64),
             num: value.iter().map(|x| reverse(*x)).fold(0, |acc, x| (acc << 8) | x as u64),
         }
     }
 }
-fn reverse(num: u32) -> u32{
+fn reverse(num: u8) -> u8{
   ((num & 0x01) << 7)
 | ((num & 0x02) << 5)
 | ((num & 0x04) << 3)
@@ -235,33 +261,51 @@ impl Not for Bitboard {
     }
 }
 
-impl Shl<u32> for Bitboard {
+impl Shl<u8> for Bitboard {
     type Output = Self;
-    fn shl(self, rhs: u32) -> Self::Output {
+    fn shl(self, rhs: u8) -> Self::Output {
         Bitboard{
             num: self.num << rhs,
         }
     }
 }
 
-impl ShlAssign<u32> for Bitboard {
-    fn shl_assign(&mut self, rhs: u32) {
+impl ShlAssign<u8> for Bitboard {
+    fn shl_assign(&mut self, rhs: u8) {
         self.num <<= rhs;
     }
 }
 
-impl Shr<u32> for Bitboard {
+impl Shr<u8> for Bitboard {
     type Output = Self;
-    fn shr(self, rhs: u32) -> Self::Output {
+    fn shr(self, rhs: u8) -> Self::Output {
         Bitboard{
             num: self.num >> rhs,
         }
     }
 }
 
-impl ShrAssign<u32> for Bitboard {
-    fn shr_assign(&mut self, rhs: u32) {
+impl ShrAssign<u8> for Bitboard {
+    fn shr_assign(&mut self, rhs: u8) {
         self.num >>= rhs;
+    }
+}
+
+impl Add for Bitboard {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output {
+        Bitboard{
+            num: self.num + rhs.num,
+        }
+    }
+}
+
+impl Sub for Bitboard {
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self::Output {
+        Bitboard{
+            num: self.num - rhs.num,
+        }
     }
 }
 
@@ -277,7 +321,7 @@ impl From<Bitboard> for BitboardIterator {
 
 /// Iterates over the bits of a bitboard. Returns indices of the 1 bits.
 impl Iterator for BitboardIterator {
-    type Item = u32;
+    type Item = u8;
     fn next(&mut self) -> Option<Self::Item> {
         // for i in 0..=63 {
         //     let bit = (self.num >> i) % 2;
@@ -287,7 +331,7 @@ impl Iterator for BitboardIterator {
         //     }
         // }
         // None
-        let bit = lsb_index(Bitboard::from(self.num));
+        let bit = (Bitboard::from(self.num)).lsb_index();
         match bit {
             None => None,
             Some(index) => {
@@ -299,7 +343,7 @@ impl Iterator for BitboardIterator {
 }
 
 impl IntoIterator for Bitboard {
-    type Item = u32;
+    type Item = u8;
     type IntoIter = BitboardIterator;
     fn into_iter(self) -> Self::IntoIter {
         BitboardIterator::from(self)

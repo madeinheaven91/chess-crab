@@ -1,3 +1,4 @@
+use consts::{FILES, PIECES, RANKS};
 use masks::{KING_MASKS, KNIGHT_MASKS, PAWN_CAPTURE_MASKS};
 use rays::{INCL_RAY, RAY};
 use zobrist::{BLACK_MOVE_KEY, CASTLING_KEYS, PIECE_KEYS};
@@ -5,6 +6,7 @@ use zobrist::{BLACK_MOVE_KEY, CASTLING_KEYS, PIECE_KEYS};
 pub mod masks;
 pub mod rays;
 pub mod zobrist;
+pub mod consts;
 
 pub fn init_statics() {
     let _ = RAY[0][0];
@@ -15,4 +17,7 @@ pub fn init_statics() {
     let _ = PIECE_KEYS[0];
     let _ = CASTLING_KEYS[0];
     let _ = BLACK_MOVE_KEY;
+    let _ = PIECES[0];
+    let _ = RANKS[0];
+    let _ = FILES[0];
 }

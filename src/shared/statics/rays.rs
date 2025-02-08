@@ -1,7 +1,5 @@
-use crate::game::structs::bitboard::Bitboard;
+use crate::{game::structs::bitboard::Bitboard, shared::structs::DIRECTION};
 
-use crate::shared::consts::DIRECTION;
-use crate::shared::functions::lsb_index;
 use lazy_static::lazy_static;
 
 // RAY
@@ -12,7 +10,7 @@ lazy_static! {
         (0..64).for_each(|i| {
             (0..8).for_each(|j| {
                 let direction = DIRECTION::from(j);
-                res[i][j] = gen_ray(i as u32, direction);
+                res[i][j] = gen_ray(i as u8, direction);
             });
         });
         res
@@ -23,7 +21,7 @@ lazy_static! {
         (0..64).for_each(|i| {
             (0..8).for_each(|j| {
                 let direction = DIRECTION::from(j);
-                res[i][j] = gen_incl_ray(i as u32, direction);
+                res[i][j] = gen_incl_ray(i as u8, direction);
             });
         });
         res
@@ -31,7 +29,7 @@ lazy_static! {
 }
 
 
-fn gen_ray(square: u32, direction: DIRECTION) -> Bitboard {
+fn gen_ray(square: u8, direction: DIRECTION) -> Bitboard {
     use DIRECTION::*;
     if !(0..64).contains(&square) {
         return Bitboard::empty();
@@ -58,13 +56,13 @@ fn gen_ray(square: u32, direction: DIRECTION) -> Bitboard {
         }
         E => {
             let mut res = square;
-            let rank = lsb_index(square).unwrap() / 8;
+            let rank = square.lsb_index().unwrap() / 8;
             for i in 0..8 {
                 let new_bit = square << i;
                 if new_bit == 0 {
                     break;
                 }
-                if lsb_index(new_bit).unwrap() / 8 != rank {
+                if new_bit.lsb_index().unwrap() / 8 != rank {
                     break;
                 }
                 res |= new_bit;
@@ -73,13 +71,13 @@ fn gen_ray(square: u32, direction: DIRECTION) -> Bitboard {
         }
         W => {
             let mut res = square;
-            let rank = lsb_index(square).unwrap() / 8;
+            let rank = square.lsb_index().unwrap() / 8;
             for i in 0..8 {
                 let new_bit = square >> i;
                 if new_bit == 0 {
                     break;
                 }
-                if lsb_index(new_bit).unwrap() / 8 != rank {
+                if new_bit.lsb_index().unwrap() / 8 != rank {
                     break;
                 }
                 res |= new_bit;
@@ -93,7 +91,7 @@ fn gen_ray(square: u32, direction: DIRECTION) -> Bitboard {
                 if new_bit == 0 {
                     break;
                 }
-                if lsb_index(new_bit).unwrap() % 8 == 7 {
+                if new_bit.lsb_index().unwrap() % 8 == 7 {
                     break;
                 }
                 res |= new_bit;
@@ -107,7 +105,7 @@ fn gen_ray(square: u32, direction: DIRECTION) -> Bitboard {
                 if new_bit == 0 {
                     break;
                 }
-                if lsb_index(new_bit).unwrap() % 8 == 7 {
+                if new_bit.lsb_index().unwrap() % 8 == 7 {
                     break;
                 }
                 res |= new_bit;
@@ -121,7 +119,7 @@ fn gen_ray(square: u32, direction: DIRECTION) -> Bitboard {
                 if new_bit == 0 {
                     break;
                 }
-                if lsb_index(new_bit).unwrap() % 8 == 0 {
+                if new_bit.lsb_index().unwrap() % 8 == 0 {
                     break;
                 }
                 res |= new_bit;
@@ -135,7 +133,7 @@ fn gen_ray(square: u32, direction: DIRECTION) -> Bitboard {
                 if new_bit == 0 {
                     break;
                 }
-                if lsb_index(new_bit).unwrap() % 8 == 0 {
+                if new_bit.lsb_index().unwrap() % 8 == 0 {
                     break;
                 }
                 res |= new_bit;
@@ -145,7 +143,7 @@ fn gen_ray(square: u32, direction: DIRECTION) -> Bitboard {
     }
 }
 
-fn gen_incl_ray(square: u32, direction: DIRECTION) -> Bitboard {
+fn gen_incl_ray(square: u8, direction: DIRECTION) -> Bitboard {
     let ray = gen_ray(square, direction);
     ray | Bitboard::from(square)
 }

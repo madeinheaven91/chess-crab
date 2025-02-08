@@ -59,9 +59,9 @@ pub fn handle_debug_cmd(state: &mut State, cmd: &Vec<&str>) -> Result<Signal, ()
             }
         }
         "r" => handle_random(state),
-        "state" => {
-            Ok(Signal::Message(state.game.borrow().check_state().to_string()))
-        }
+        // "state" => {
+        //     Ok(Signal::Message(state.game.borrow().state.to_string()))
+        // }
         "hash" => {
             Ok(Signal::Message(state.game.borrow().get_hash().to_string()))
         }

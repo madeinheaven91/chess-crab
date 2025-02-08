@@ -1,6 +1,6 @@
-use crate::{game::moves::move_struct::Move, shared::{consts::*, errors::ChessError, functions::{index_to_square, lsb, lsb_index, msb, square_to_index}, statics::zobrist::{BLACK_MOVE_KEY, CASTLING_KEYS, PIECE_KEYS}}};
+use crate::{game::moves::move_struct::Move, shared::{statics::consts::*, errors::ChessError, functions::{index_to_square, square_to_index}, statics::zobrist::{BLACK_MOVE_KEY, CASTLING_KEYS, PIECE_KEYS}}};
 
-use super::{bitboard::Bitboard, color::{Color, Castling}, game_state::GameState, piece::Piece};
+use super::{bitboard::Bitboard, color::{Color, Castling}, piece::Piece};
 
 use std::{cell::RefCell, fmt::Display, ops::AddAssign, rc::Rc};
 use Color::*;
@@ -12,7 +12,7 @@ pub struct Board {
     pub pieces: [[Bitboard; 6]; 2],
     pub turn: Color,
     pub castling_rights:[[bool; 2]; 2],
-    pub en_passant: Option<u32>,
+    pub en_passant: Option<u8>,
     // pub move_history: Vec<Move>,
     pub halfmove_clock: u8,
     pub repetition_history: Vec<u64>,
@@ -20,6 +20,7 @@ pub struct Board {
     pub white_pieces: Bitboard,
     pub black_pieces: Bitboard,
     pub all_pieces: Bitboard,
+    pub empty: Bitboard,
 }
 
 impl Board {
@@ -35,7 +36,8 @@ impl Board {
 
             white_pieces: Bitboard::empty(),
             black_pieces: Bitboard::empty(),
-            all_pieces: Bitboard::empty()
+            all_pieces: Bitboard::empty(),
+            empty: Bitboard::from(u64::MAX)
         }
     }
 
@@ -57,10 +59,24 @@ impl Board {
         | self.pieces[White][Pawn]
     }
 
+    pub fn attacks(&self, color: Color) -> Bitboard {
+        let mut cloned = self.clone();
+        cloned.pieces[White][King] = Bitboard::empty();
+        cloned.pieces[Black][King] = Bitboard::empty();
+        let mut res: u64 = 0;
+        for square in 0..64 {
+            if cloned.square_is_attacked(square, color) {
+                res |= 1 << square;
+            }
+        }
+        Bitboard::from(res)
+    }
+
     pub fn update_pieces(&mut self) {
         self.white_pieces = self.white_pieces();
         self.black_pieces = self.black_pieces();
         self.all_pieces = self.white_pieces | self.black_pieces;
+        self.empty = Bitboard::from(u64::MAX - self.all_pieces.num())
     }
 
     pub fn enemies(&self, color: Color) -> Bitboard {
@@ -103,7 +119,7 @@ impl Board {
             .replace("1", ".")
             .chars()
             .rev()
-            .zip(0..64u32)
+            .zip(0..64u8)
         {
             if char.is_ascii_alphabetic() {
                 match char {
@@ -248,7 +264,7 @@ impl Board {
     
     /// Finds a piece at a given index and returns its color and type.
     /// If there is no piece, returns `None`
-    pub fn find_piece(&self, index: u32) -> Option<(Color, Piece)>{
+    pub fn find_piece(&self, index: u8) -> Option<(Color, Piece)>{
         for (color, pieces) in self.pieces.iter().enumerate(){
             for (piece_i, piece) in pieces.iter().enumerate(){
                 if piece.num() & (1u64 << index) != 0{
@@ -302,41 +318,31 @@ impl Board {
         }
     }
 
-    /// Returns the color of the checked side in a current position.
-    /// Returns `None` if no side is in check.
-    pub fn is_check(&self) -> Option<Color> {
-        if self.square_is_attacked(lsb_index(self.pieces[White][King]).unwrap_or(0), Black) {
-            Some(White)
-        }else if self.square_is_attacked(lsb_index(self.pieces[Black][King]).unwrap_or(0), White) {
-            Some(Black)
-        }else {
-            None
-        }
-    }
-
-    pub fn check_state(&self) -> GameState {
-        if self.halfmove_clock == 100 {
-                GameState::Draw
-        }else if self.gen_legal_moves().is_empty() {
-            if let Some(color) = self.is_check() {
-                GameState::Win(!color)
-            } else {
-                GameState::Draw
-            }
-        }else{
-            let hash = self.get_hash();
-            let mut ctr = 0;
-            for hash1 in self.repetition_history.iter() {
-                if hash == *hash1 {
-                    ctr += 1;
-                };
-            };
-            if ctr >= 3 {
-                return GameState::Draw
-            }
-            GameState::Ongoing
-        }
-    }
+    // pub fn update_state(&mut self) {
+    //     let state = if self.halfmove_clock == 100 {
+    //             GameState::Draw
+    //     }else if self.gen_legal_moves().is_empty() {
+    //         if let Some(color) = self.is_check() {
+    //             GameState::Win(!color)
+    //         } else {
+    //             GameState::Draw
+    //         }
+    //     }else{
+    //         let hash = self.get_hash();
+    //         let mut ctr = 0;
+    //         for hash1 in self.repetition_history.iter() {
+    //             if hash == *hash1 {
+    //                 ctr += 1;
+    //             };
+    //         };
+    //         if ctr >= 3 {
+    //             GameState::Draw
+    //         }else{
+    //             GameState::Ongoing
+    //         }
+    //     };
+    //     self.state = state
+    // }
 
     pub fn get_hash(&self) -> u64 {
         let mut hash = 0u64;
@@ -364,15 +370,15 @@ impl Board {
         };
 
         // Check if only 1 king
-        if lsb(self.pieces[White][King]) != msb(self.pieces[White][King]) && self.pieces[White][King] != Bitboard::empty(){
+        if self.pieces[White][King].lsb() != self.pieces[White][King].msb() && self.pieces[White][King] != Bitboard::empty(){
             return false
         }
-        if lsb(self.pieces[Black][King]) != msb(self.pieces[Black][King]) && self.pieces[Black][King] != Bitboard::empty(){
+        if self.pieces[Black][King].lsb() != self.pieces[Black][King].msb() && self.pieces[Black][King] != Bitboard::empty(){
             return false
         }
 
         // Check if no pawns on 1 and 8 rank
-        if (self.pieces[White][Pawn] | self.pieces[Black][Pawn]) & Bitboard::from(RANK_1 | RANK_8) != 0 {
+        if (self.pieces[White][Pawn] | self.pieces[Black][Pawn]) & (*RANK_1 | *RANK_8) != 0 {
             return false
         }
 
@@ -382,23 +388,38 @@ impl Board {
 
 impl Default for Board {
     fn default() -> Self {
+        let white = 
+                    *WK |
+                    *WQ |
+                    *WR |
+                    *WB |
+                    *WN |
+                    *WP;
+        let black = 
+                    *BK |
+                    *BQ |
+                    *BR |
+                    *BB |
+                    *BN |
+                    *BP;
+        let all = black | white;
         Board {
             pieces: [
                 [
-                    Bitboard::from(WK),
-                    Bitboard::from(WQ),
-                    Bitboard::from(WR),
-                    Bitboard::from(WB),
-                    Bitboard::from(WN),
-                    Bitboard::from(WP),
+                    *WK,
+                    *WQ,
+                    *WR,
+                    *WB,
+                    *WN,
+                    *WP,
                 ],
                 [
-                    Bitboard::from(BK),
-                    Bitboard::from(BQ),
-                    Bitboard::from(BR),
-                    Bitboard::from(BB),
-                    Bitboard::from(BN),
-                    Bitboard::from(BP),
+                    *BK,
+                    *BQ,
+                    *BR,
+                    *BB,
+                    *BN,
+                    *BP,
                 ],
             ],
             castling_rights: [[true; 2]; 2],
@@ -408,9 +429,10 @@ impl Default for Board {
             halfmove_clock: 0,
             repetition_history: Vec::new(),
 
-            white_pieces: Bitboard::from(WK) | Bitboard::from(WQ) | Bitboard::from(WR) | Bitboard::from(WB) | Bitboard::from(WN) | Bitboard::from(WP),
-            black_pieces: Bitboard::from(BK) | Bitboard::from(BQ) | Bitboard::from(BR) | Bitboard::from(BB) | Bitboard::from(BN) | Bitboard::from(BP),
-            all_pieces: Bitboard::from(BK) | Bitboard::from(BQ) | Bitboard::from(BR) | Bitboard::from(BB) | Bitboard::from(BN) | Bitboard::from(BP) | Bitboard::from(WK) | Bitboard::from(WQ) | Bitboard::from(WR) | Bitboard::from(WB) | Bitboard::from(WN) | Bitboard::from(WP),
+            white_pieces: white,
+            black_pieces: black,
+            all_pieces: all,
+            empty: Bitboard::from(u64::MAX - all.num())
         }
     }
 }
@@ -453,9 +475,6 @@ impl Display for Board {
             writeln!(f, "{} checked!", color)?
         }
         writeln!(f, "FEN: {}", self.to_fen())?;
-        if self.check_state().is_finished() {
-            writeln!(f, "\nGame finished: {}", self.check_state())?;
-        }
         Ok(())
     }
 }

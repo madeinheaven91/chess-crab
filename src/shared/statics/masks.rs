@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 
 use crate::game::structs::bitboard::Bitboard;
 
-use crate::shared::consts::{FILE_A, FILE_B, FILE_G, FILE_H};
+use super::consts::{FILE_A, FILE_B, FILE_G, FILE_H};
 
 lazy_static! {
     pub static ref KNIGHT_MASKS: [Bitboard; 64] = gen_knight_masks();
@@ -14,13 +14,11 @@ lazy_static! {
 fn gen_knight_masks() -> [Bitboard; 64] {
     let mut masks: [Bitboard; 64] = [Bitboard::empty(); 64];
     (0..64).for_each(|i| {
-        let knight = 1u64 << i;
-        masks[i] = Bitboard::from(
-            ((knight >> 17 | knight << 15) & !FILE_H) 
-                | ((knight >> 15 | knight << 17) & !FILE_A) 
-                | ((knight >> 10 | knight << 6) & !FILE_H & !FILE_G) 
-                | ((knight >> 6 | knight << 10) & !FILE_A & !FILE_B)
-        );
+        let knight = Bitboard::from(i as u8);
+        masks[i] = 
+            ((knight >> 17 | knight << 15) & !*FILE_H) 
+            | ((knight >> 15 | knight << 17) & !*FILE_A) 
+            | ((knight >> 10 | knight << 6) & !*FILE_H & !*FILE_G) | ((knight >> 6 | knight << 10) & !*FILE_A & !*FILE_B)
     });
     masks
 }
@@ -28,13 +26,11 @@ fn gen_knight_masks() -> [Bitboard; 64] {
 fn gen_king_masks() -> [Bitboard; 64] {
     let mut masks: [Bitboard; 64] = [Bitboard::empty(); 64];
     (0..64).for_each(|i| {
-        let king = 1u64 << i;
-        masks[i] = Bitboard::from(
+        let king = Bitboard::from(i as u8);
+        masks[i] = 
             king >> 8
             | king << 8
-            | ((king >> 1 | king >> 9 | king << 7) & !FILE_H)
-            | ((king >> 7 | king << 1 | king << 9) & !FILE_A)
-        );
+            | ((king >> 1 | king >> 9 | king << 7) & !*FILE_H) | ((king >> 7 | king << 1 | king << 9) & !*FILE_A)
     });
     masks
 }
@@ -48,9 +44,9 @@ fn gen_king_masks() -> [Bitboard; 64] {
 fn gen_pawn_capture_masks() -> [[Bitboard; 64]; 2] {
     let mut masks: [[Bitboard; 64]; 2] = [[Bitboard::empty(); 64]; 2];
     for i in 0..64 {
-        let pawn = 1u64 << i;
-        masks[0][i] = Bitboard::from(((pawn << 9) & !FILE_A) | ((pawn << 7) & !FILE_H));
-        masks[1][i] = Bitboard::from(((pawn >> 9) & !FILE_H) | ((pawn >> 7) & !FILE_A));
+        let pawn = Bitboard::from(i as u8);
+        masks[0][i] = ((pawn << 9) & !*FILE_A) | ((pawn << 7) & !*FILE_H);
+        masks[1][i] = ((pawn >> 9) & !*FILE_H) | ((pawn >> 7) & !*FILE_A);
     }
     masks
 }
